@@ -24,6 +24,15 @@ Diario glucémico nocturno personal para el seguimiento de diabetes. Diseñado p
 - Docker Desktop (para PostgreSQL)
 - Maven 3.9+ (`mvn` en PATH)
 
+## Autenticación
+
+La app requiere un PIN de 4 dígitos para acceder.
+
+- **PIN inicial:** `0000`
+- Al primer ingreso, la app obliga a cambiarlo antes de poder usar nada.
+- El PIN se puede cambiar desde **Configuración → Cambiar PIN**.
+- Después de 5 intentos fallidos, el acceso se bloquea 15 minutos.
+
 ## Cómo correr en local
 
 ### 1. Levantar la base de datos
@@ -125,9 +134,19 @@ El backend calcula automáticamente el nivel de atención al guardar cada regist
 
 Los umbrales se configuran desde la pantalla de configuración.
 
+## Variables de entorno (producción)
+
+| Variable | Descripción |
+|----------|-------------|
+| `DB_URL` | JDBC URL de PostgreSQL |
+| `DB_USER` | Usuario de la DB |
+| `DB_PASSWORD` | Contraseña de la DB |
+| `JWT_SECRET` | String aleatorio ≥ 32 caracteres. Generá con: `openssl rand -base64 64` |
+
 ## Próximos pasos para deploy
 
-1. Crear `backend/src/main/resources/application-prod.yml` con variables de entorno reales
+1. Generar `JWT_SECRET` con `openssl rand -base64 64` y configurarlo como variable de entorno
+2. Crear `backend/src/main/resources/application-prod.yml` con variables de entorno reales
 2. Dockerizar el backend (`Dockerfile` multi-stage con Maven + JRE 21)
 3. Agregar `frontend/.env.production` con la URL real del backend
 4. Hacer build del frontend con `npm run build` y servir con Nginx o similar
