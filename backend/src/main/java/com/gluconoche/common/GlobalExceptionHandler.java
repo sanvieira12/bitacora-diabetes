@@ -1,5 +1,7 @@
 package com.gluconoche.common;
 
+import com.gluconoche.auth.AccountLockedException;
+import com.gluconoche.auth.BadPinException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -11,10 +13,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<Map<String, Object>> handleLocked(AccountLockedException ex) {
+        long retryAfterSeconds = java.time.Duration.between(
+                java.time.OffsetDateTime.now(), ex.getLockedUntil()).toSeconds();
+        return ResponseEntity.status(423)
+                .header("Retry-After", String.valueOf(Math.max(retryAfterSeconds, 0)))
+                .body(Map.of("error", "locked", "lockedUntil", ex.getLockedUntil().toString()));
+    }
+
+    @ExceptionHandler(BadPinException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadPin(BadPinException ex) {
+        String msg = ex.getRemainingAttempts() >= 0
+                ? "PIN incorrecto. Te quedan " + ex.getRemainingAttempts() + " intento(s)."
+                : "PIN actual incorrecto.";
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(msg));
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(EntityNotFoundException ex) {
