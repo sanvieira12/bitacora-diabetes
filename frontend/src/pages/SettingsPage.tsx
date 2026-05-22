@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -146,6 +146,25 @@ export function SettingsPage() {
               focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[80px] resize-none
               placeholder:text-text-secondary/50"
           />
+        </Card>
+
+        {/* PIN */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-text-primary">Seguridad</h2>
+              <p className="text-xs text-text-secondary mt-0.5">PIN de acceso a la app</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/cambiar-pin')}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10
+                transition-colors text-sm text-text-secondary hover:text-text-primary"
+            >
+              <Shield size={15} />
+              Cambiar PIN
+            </button>
+          </div>
         </Card>
 
         {saveError && <p className="text-sm text-red-400 text-center">{saveError}</p>}
