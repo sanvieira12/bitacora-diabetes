@@ -1,0 +1,56 @@
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+*.iml
+*.iws
+*.ipr
+.idea/
+*.project
+*.classpath
+*.settings/
+
+# Spring Boot
+*.log
+logs/
+
+# Node / Frontend
+node_modules/
+dist/
+.pnp/
+.pnp.js
+.yarn/install-state.gz
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V2
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker volumes
+postgres-data/
+
+# IDE
+.vscode/
+*.swp
+*.swo
