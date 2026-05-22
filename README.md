@@ -1,68 +1,136 @@
 # GlucoNoche
 
-Bitácora nocturna de glucosa personal para uso familiar. Herramienta de registro para llevar a la diabetóloga.
+Diario glucémico nocturno personal para el seguimiento de diabetes. Diseñado para uso individual, optimizado para registro rápido a la madrugada.
 
-> **GlucoNoche es una herramienta de registro personal. No diagnostica, no prescribe ni reemplaza el criterio de un profesional de la salud. Consultá siempre a tu médica o diabetóloga ante cualquier duda.**
+> **Aviso médico:** Esta aplicación es una herramienta de registro personal y no reemplaza el diagnóstico, tratamiento ni criterio clínico de su médica o equipo de salud. Ante cualquier duda o emergencia, consulte a su profesional de salud.
 
 ## Stack
 
-- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS (dark mode)
-- **Backend:** Java 21 + Spring Boot 3.x + PostgreSQL 16 + Flyway
-- **Infra:** Docker Compose
+| Capa | Tecnología |
+|------|-----------|
+| Backend | Java 21 · Spring Boot 3.2 · Spring Data JPA |
+| Base de datos | PostgreSQL 16 |
+| Migraciones | Flyway |
+| PDF | iText 7 |
+| CSV | Apache Commons CSV |
+| Frontend | React 18 · TypeScript · Vite · Tailwind CSS |
+| Gráficos | Recharts |
+| Formularios | React Hook Form + Zod |
 
 ## Requisitos
 
+- Node.js 20+
 - Java 21+
-- Node 18+
-- Docker + Docker Compose
+- Docker Desktop (para PostgreSQL)
+- Maven 3.9+ (`mvn` en PATH)
 
-## Inicio rápido
+## Cómo correr en local
 
-### 1. Base de datos
+### 1. Levantar la base de datos
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-### 2. Backend
+Esto crea el contenedor PostgreSQL en `localhost:5432` con base de datos `gluconoche`, usuario `gluconoche`, contraseña `gluconoche_dev`.
+
+### 2. Arrancar el backend
 
 ```bash
 cd backend
-cp .env.example .env
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+mvn spring-boot:run
 ```
 
-El backend estará disponible en `http://localhost:8080`.
+El servidor arranca en `http://localhost:8080`. Flyway aplica las migraciones automáticamente al primer inicio (crea las tablas y siembra a Juana como usuaria).
 
-### 3. Frontend
+Para desarrollo local con SQL en consola:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+### 3. Arrancar el frontend
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-La app estará disponible en `http://localhost:5173`.
+La app abre en `http://localhost:5173`. Las llamadas a `/api/*` se proxean automáticamente al backend en 8080.
 
-## API
-
-La documentación de la API está disponible en `http://localhost:8080/api` una vez iniciado el backend.
-
-## Estructura
+### 4. Abrir en el navegador
 
 ```
-bitacora-diabetes/
-├── frontend/       # React + Vite app
-├── backend/        # Spring Boot app
-└── docker-compose.yml
+http://localhost:5173
 ```
 
-## Funcionalidades
+## Endpoints principales
 
-- Registro nocturno de glucosa con nivel de atención automático (VERDE/AMARILLO/ROJO)
-- Registro de episodios hipoglucémicos
-- Historial con filtros
-- Estadísticas y gráficos
-- Exportación a PDF y CSV para llevar a la consulta médica
-- Configuración de umbrales personalizados
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/night-records` | Listado paginado con filtros |
+| POST | `/api/night-records` | Crear registro nocturno |
+| PUT | `/api/night-records/:id` | Editar registro |
+| DELETE | `/api/night-records/:id` | Eliminar registro |
+| GET | `/api/episodes` | Listado paginado de episodios |
+| POST | `/api/episodes` | Crear episodio hipoglucémico |
+| GET | `/api/statistics/summary` | Estadísticas del período |
+| GET | `/api/statistics/glucose-trend` | Tendencia de glucosa |
+| GET | `/api/statistics/episode-frequency` | Frecuencia de episodios |
+| GET | `/api/statistics/factors` | Factores (actividad, estrés, etc.) |
+| GET | `/api/settings` | Obtener configuración |
+| PUT | `/api/settings` | Actualizar umbrales y notas |
+| GET | `/api/reports/doctor-summary` | JSON con resumen para médica |
+| GET | `/api/reports/export/pdf` | Descarga PDF del informe |
+| GET | `/api/reports/export/csv` | Descarga ZIP con CSVs |
+
+Todos los endpoints aceptan `?from=YYYY-MM-DD&to=YYYY-MM-DD`. Los de listado aceptan `?page=0&size=20`.
+
+## Estructura del proyecto
+
+```
+.
+├── docker-compose.yml          # PostgreSQL 16
+├── backend/
+│   ├── pom.xml
+│   └── src/main/java/com/gluconoche/
+│       ├── common/             # ApiResponse, GlobalExceptionHandler, enums, JSONB converter
+│       ├── config/             # CORS
+│       ├── person/             # Entidad persona (usuario único: Juana)
+│       ├── settings/           # Umbrales y configuración
+│       ├── nightrecord/        # Registro nocturno + calculador de atención
+│       ├── episode/            # Episodios hipoglucémicos
+│       ├── statistics/         # Estadísticas agregadas
+│       └── report/             # Generación PDF/CSV
+└── frontend/
+    └── src/
+        ├── api/                # Clientes HTTP
+        ├── components/         # UI, layout, gráficos, formularios
+        ├── hooks/              # useNightRecords, useSettings
+        ├── lib/                # formatters, dateUtils
+        ├── pages/              # HomePage, RegisterNightPage, RegisterEpisodePage,
+        │                       # HistoryPage, NightDetailPage, StatisticsPage,
+        │                       # SettingsPage, ReportPage
+        └── types/              # Tipos TypeScript
+```
+
+## Lógica de niveles de atención
+
+El backend calcula automáticamente el nivel de atención al guardar cada registro:
+
+- **ROJO:** glucosa < umbral crítico (por defecto 70 mg/dL) o glucosa > umbral alto (270 mg/dL)
+- **AMARILLO:** glucosa < umbral bajo (100), glucosa > objetivo máximo (180), sin colación con glucosa < 120, estrés alto, sueño malo
+- **VERDE:** glucosa dentro del rango objetivo [110, 180 mg/dL]
+
+Los umbrales se configuran desde la pantalla de configuración.
+
+## Próximos pasos para deploy
+
+1. Crear `backend/src/main/resources/application-prod.yml` con variables de entorno reales
+2. Dockerizar el backend (`Dockerfile` multi-stage con Maven + JRE 21)
+3. Agregar `frontend/.env.production` con la URL real del backend
+4. Hacer build del frontend con `npm run build` y servir con Nginx o similar
+5. Usar un secreto real para la BD (no la contraseña de dev)
+6. Configurar SSL/TLS para el backend
+7. Agregar backups automáticos de PostgreSQL
