@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,6 +47,9 @@ public class EpisodeService {
     @Transactional
     public EpisodeResponse create(EpisodeRequest request) {
         UUID personId = currentPersonProvider.getPersonId();
+
+        // Always use Uruguay local date for new episodes
+        request.setEpisodeDate(ZonedDateTime.now(ZoneId.of("America/Montevideo")).toLocalDate());
 
         EpisodeRecord episode = new EpisodeRecord();
         episode.setPerson(currentPersonProvider.getPerson());

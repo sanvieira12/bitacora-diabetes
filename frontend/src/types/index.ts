@@ -61,10 +61,14 @@ export interface EpisodeRecord {
   episodeDate: string;
   episodeTime: string;
   symptoms: string[];
+  symptomsNote?: string;
   glucoseAtEpisode?: number;
-  intervention: string;
+  intervention?: string;
+  interventionType?: string;
+  interventionNote?: string;
   glucoseAfterIntervention?: number;
   recoveryTimeMinutes?: number;
+  recoveryTime?: string;
   severity: EpisodeSeverity;
   notes?: string;
   createdAt: string;
@@ -155,13 +159,15 @@ export interface ProgressData {
 }
 
 export interface EpisodeRequest {
-  episodeDate: string;
   episodeTime: string;
   symptoms: string[];
+  symptomsNote?: string;
   glucoseAtEpisode?: number;
-  intervention: string;
+  interventionType?: string;
+  interventionNote?: string;
   glucoseAfterIntervention?: number;
   recoveryTimeMinutes?: number;
+  recoveryTime?: string;
   severity: EpisodeSeverity;
   notes?: string;
   nightRecordId?: string;

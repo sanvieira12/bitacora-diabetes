@@ -13,7 +13,8 @@ import java.util.UUID;
 @Data
 public class EpisodeRequest {
 
-    @NotNull(message = "La fecha del episodio es obligatoria")
+    // Not required from frontend on create — set to Uruguay local date by service.
+    // Kept for edit mode.
     private LocalDate episodeDate;
 
     @NotNull(message = "La hora del episodio es obligatoria")
@@ -21,28 +22,34 @@ public class EpisodeRequest {
 
     private List<String> symptoms = new ArrayList<>();
 
-    @Min(value = 20, message = "La glucosa debe ser al menos 20 mg/dL")
-    @Max(value = 600, message = "La glucosa no puede superar 600 mg/dL")
+    private String symptomsNote;
+
+    @Min(value = 10, message = "La glucosa debe ser al menos 10 mg/dL")
+    @Max(value = 300, message = "La glucosa no puede superar 300 mg/dL")
     private Integer glucoseAtEpisode;
 
-    @NotBlank(message = "La intervención es obligatoria")
+    // Legacy free-text intervention (kept for backward compat)
     private String intervention;
 
-    @Min(value = 20, message = "La glucosa post-intervención debe ser al menos 20 mg/dL")
-    @Max(value = 600, message = "La glucosa post-intervención no puede superar 600 mg/dL")
+    // New structured intervention
+    private String interventionType;
+
+    private String interventionNote;
+
+    @Min(value = 10, message = "La glucosa post debe ser al menos 10 mg/dL")
+    @Max(value = 400, message = "La glucosa post no puede superar 400 mg/dL")
     private Integer glucoseAfterIntervention;
 
     @Min(value = 0, message = "El tiempo de recuperación no puede ser negativo")
     private Integer recoveryTimeMinutes;
+
+    // Snapped recovery enum: FAST | NORMAL | SLOW | VERY_SLOW
+    private String recoveryTime;
 
     @NotNull(message = "La severidad es obligatoria")
     private EpisodeSeverity severity;
 
     private String notes;
 
-    /**
-     * If provided, links this episode to a specific night record.
-     * If null, the service will auto-detect from episodeDate.
-     */
     private UUID nightRecordId;
 }

@@ -48,14 +48,26 @@ public class EpisodeRecord {
     @Column(name = "glucose_at_episode")
     private Integer glucoseAtEpisode;
 
-    @Column(name = "intervention", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "intervention", columnDefinition = "TEXT")
     private String intervention;
+
+    @Column(name = "intervention_type", length = 20)
+    private String interventionType;
+
+    @Column(name = "intervention_note", columnDefinition = "TEXT")
+    private String interventionNote;
+
+    @Column(name = "symptoms_note", columnDefinition = "TEXT")
+    private String symptomsNote;
 
     @Column(name = "glucose_after_intervention")
     private Integer glucoseAfterIntervention;
 
     @Column(name = "recovery_time_minutes")
     private Integer recoveryTimeMinutes;
+
+    @Column(name = "recovery_time", length = 20)
+    private String recoveryTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "severity", nullable = false, length = 10)

@@ -22,10 +22,14 @@ public class EpisodeResponse {
     private LocalDate episodeDate;
     private LocalTime episodeTime;
     private List<String> symptoms;
+    private String symptomsNote;
     private Integer glucoseAtEpisode;
     private String intervention;
+    private String interventionType;
+    private String interventionNote;
     private Integer glucoseAfterIntervention;
     private Integer recoveryTimeMinutes;
+    private String recoveryTime;
     private EpisodeSeverity severity;
     private String notes;
     private OffsetDateTime createdAt;

@@ -1,265 +1,435 @@
-import React, { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, ArrowLeft, Zap } from 'lucide-react';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
-import { GlucoseInput } from '../components/forms/GlucoseInput';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { GlucoseSlider } from '../components/forms/GlucoseSlider';
+import { SnappedSlider } from '../components/forms/SnappedSlider';
+import { SymptomChips } from '../components/forms/SymptomChips';
+import { PillSelect } from '../components/forms/PillSelect';
 import { createEpisode } from '../api/episodes';
-import { today, nowTime } from '../lib/dateUtils';
+import { nowTime } from '../lib/dateUtils';
 import type { EpisodeSeverity } from '../types';
 
-const COMMON_SYMPTOMS = [
-  'Sudoración',
-  'Temblores',
-  'Mareos',
-  'Confusión',
-  'Hambre',
-  'Palpitaciones',
-  'Visión borrosa',
-  'Debilidad',
+// ── Slider option sets ────────────────────────────────────────────────────────
+
+const SEVERITY_OPTIONS = [
+  { value: 'MILD',     label: '😰 Leve',     color: 'var(--gaga-accent)' },
+  { value: 'MODERATE', label: '😟 Moderado', color: '#fb923c' },
+  { value: 'SEVERE',   label: '🚨 Severo',   color: 'var(--gaga-danger)' },
 ];
 
-const SEVERITY_OPTIONS: { value: EpisodeSeverity; label: string; color: string }[] = [
-  { value: 'MILD', label: 'Leve', color: 'border-green-400 text-green-400 bg-green-400/10 hover:bg-green-400/20' },
-  { value: 'MODERATE', label: 'Moderado', color: 'border-yellow-400 text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20' },
-  { value: 'SEVERE', label: 'Grave', color: 'border-red-400 text-red-400 bg-red-400/10 hover:bg-red-400/20' },
+const RECOVERY_OPTIONS = [
+  { value: 'FAST',      label: '⚡ < 15 min',    color: 'var(--gaga-success)' },
+  { value: 'NORMAL',    label: '🕐 15–30 min',   color: 'var(--gaga-accent)' },
+  { value: 'SLOW',      label: '⏳ 30–60 min',   color: '#fb923c' },
+  { value: 'VERY_SLOW', label: '🌙 + de 1 hora', color: 'var(--gaga-danger)' },
 ];
+
+const INTERVENTION_OPTIONS = [
+  { value: 'juice',        label: '🧃 Tomé jugo' },
+  { value: 'glucose_tabs', label: '💊 Comprimidos de glucosa' },
+  { value: 'candy',        label: '🍬 Comí algo dulce' },
+  { value: 'glucagon',     label: '💉 Glucagón' },
+  { value: 'nothing',      label: '🤷 Se pasó solo' },
+  { value: 'other',        label: '✏️ Otra cosa' },
+];
+
+// ── Step indicator ────────────────────────────────────────────────────────────
+
+const STEPS = ['Hora', 'Glucosa', 'Severidad', 'Síntomas', 'Intervención', 'Después'];
+
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className="h-1 rounded-full transition-all duration-300"
+          style={{
+            width: i === current ? 24 : 8,
+            background: i <= current ? 'var(--gaga-danger)' : 'var(--gaga-surface-2)',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Form state ────────────────────────────────────────────────────────────────
+
+interface FormState {
+  time: string;
+  glucoseAtEpisode: number;
+  glucoseEnabled: boolean;
+  severity: EpisodeSeverity | null;
+  symptoms: string[];
+  symptomsNote: string;
+  interventionType: string | null;
+  interventionNote: string;
+  postGlucoseEnabled: boolean;
+  postGlucose: number;
+  recoveryTime: string | null;
+  notes: string;
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 
 export function RegisterEpisodePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const nightRecordId = searchParams.get('nightRecordId') || undefined;
-  const dateParam = searchParams.get('date') || today();
 
-  const [date, setDate] = useState(dateParam);
-  const [time, setTime] = useState(nowTime());
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [customSymptom, setCustomSymptom] = useState('');
-  const [glucoseAtEpisode, setGlucoseAtEpisode] = useState('');
-  const [intervention, setIntervention] = useState('');
-  const [glucoseAfter, setGlucoseAfter] = useState('');
-  const [recoveryTime, setRecoveryTime] = useState('');
-  const [severity, setSeverity] = useState<EpisodeSeverity | null>(null);
-  const [notes, setNotes] = useState('');
+  const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+  const [animating, setAnimating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitState, setSubmitState] = useState<'idle' | 'success' | 'error'>('idle');
+  const [shake, setShake] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
-  const toggleSymptom = (s: string) => {
-    setSelectedSymptoms((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-    );
+  const [form, setForm] = useState<FormState>({
+    time: nowTime(),
+    glucoseAtEpisode: 55,
+    glucoseEnabled: true,
+    severity: null,
+    symptoms: [],
+    symptomsNote: '',
+    interventionType: null,
+    interventionNote: '',
+    postGlucoseEnabled: false,
+    postGlucose: 90,
+    recoveryTime: null,
+    notes: '',
+  });
+
+  const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
+    setForm((f) => ({ ...f, [key]: val }));
+
+  const canAdvance = (): boolean => {
+    if (step === 0) return form.time.length >= 4;
+    if (step === 2 && form.severity === null) return false;
+    if (step === 3 && form.symptoms.length === 0) return false;
+    if (step === 4 && form.interventionType === null) return false;
+    return true;
   };
 
-  const addCustomSymptom = () => {
-    const trimmed = customSymptom.trim();
-    if (trimmed && !selectedSymptoms.includes(trimmed)) {
-      setSelectedSymptoms((prev) => [...prev, trimmed]);
-      setCustomSymptom('');
-    }
+  const goStep = (next: number) => {
+    if (animating) return;
+    setDirection(next > step ? 'forward' : 'back');
+    setAnimating(true);
+    setTimeout(() => {
+      setStep(next);
+      setAnimating(false);
+    }, 250);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!severity) {
-      setError('Seleccioná la severidad del episodio');
-      return;
-    }
-    if (!intervention.trim()) {
-      setError('La intervención es obligatoria');
-      return;
-    }
-    setError(null);
+  const handleSubmit = async () => {
+    if (!canAdvance() || submitting) return;
     setSubmitting(true);
+    if (btnRef.current) btnRef.current.style.transform = 'scale(0.97)';
     try {
       await createEpisode({
-        episodeDate: date,
-        episodeTime: time,
-        symptoms: selectedSymptoms,
-        glucoseAtEpisode: glucoseAtEpisode ? Number(glucoseAtEpisode) : undefined,
-        intervention: intervention.trim(),
-        glucoseAfterIntervention: glucoseAfter ? Number(glucoseAfter) : undefined,
-        recoveryTimeMinutes: recoveryTime ? Number(recoveryTime) : undefined,
-        severity,
-        notes: notes.trim() || undefined,
+        episodeTime: form.time,
+        symptoms: form.symptoms,
+        symptomsNote: form.symptomsNote || undefined,
+        glucoseAtEpisode: form.glucoseEnabled ? form.glucoseAtEpisode : undefined,
+        interventionType: form.interventionType ?? undefined,
+        interventionNote:
+          form.interventionType === 'other' ? form.interventionNote || undefined : undefined,
+        glucoseAfterIntervention: form.postGlucoseEnabled ? form.postGlucose : undefined,
+        recoveryTime: form.recoveryTime ?? undefined,
+        severity: form.severity ?? 'MILD',
+        notes: form.notes || undefined,
         nightRecordId,
       });
-      setSaved(true);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
+      setSubmitState('success');
+      setTimeout(() => navigate(-1), 900);
+    } catch {
+      setSubmitState('error');
+      setShake(true);
+      setTimeout(() => {
+        setShake(false);
+        setSubmitState('idle');
+        if (btnRef.current) btnRef.current.style.transform = '';
+      }, 600);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (saved) {
-    return (
-      <div className="space-y-5">
-        <Card className="p-6 text-center">
-          <CheckCircle className="mx-auto text-green-400 mb-3" size={48} />
-          <h2 className="text-lg font-bold text-text-primary mb-1">¡Episodio registrado!</h2>
-          <p className="text-text-secondary text-sm mb-5">
-            El episodio fue guardado correctamente.
-          </p>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => navigate('/')} className="flex-1">
-              Inicio
-            </Button>
-            <Button variant="primary" onClick={() => navigate('/historial')} className="flex-1">
-              Ver historial
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  const slideClass = animating
+    ? direction === 'forward'
+      ? 'opacity-0 -translate-x-4'
+      : 'opacity-0 translate-x-4'
+    : 'opacity-100 translate-x-0';
+
+  const showSymptomsNote =
+    form.symptoms.length > 0 && !form.symptoms.includes('no_symptoms');
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col min-h-[calc(100vh-120px)]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => (step > 0 ? goStep(step - 1) : navigate(-1))}
           className="p-2 rounded-xl hover:bg-white/5 transition-colors text-text-secondary"
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex items-center gap-2">
-          <Zap className="text-red-400" size={22} />
-          <h1 className="text-xl font-bold text-text-primary">Registrar episodio</h1>
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-xs text-text-secondary font-medium">{STEPS[step]}</span>
+          <StepIndicator current={step} total={STEPS.length} />
         </div>
+        <div className="w-9" />
       </div>
 
-      {/* Optimized for 3AM - big, easy to tap */}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* When */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-text-primary">¿Cuándo?</h2>
-          <Input label="Fecha" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <Input label="Hora" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </Card>
-
-        {/* Severity - big buttons, most important */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-text-primary">Severidad *</h2>
-          <div className="grid grid-cols-3 gap-3">
-            {SEVERITY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setSeverity(opt.value)}
-                className={[
-                  'py-4 rounded-xl border-2 font-bold text-base transition-all',
-                  severity === opt.value
-                    ? opt.color + ' scale-105'
-                    : 'border-border text-text-secondary hover:border-white/30',
-                ].join(' ')}
-              >
-                {opt.label}
-              </button>
-            ))}
+      {/* Step content */}
+      <div
+        className={`flex-1 transition-all duration-250 ease-out ${slideClass}`}
+        style={{ transitionProperty: 'opacity, transform' }}
+      >
+        {/* Step 0 — Time */}
+        {step === 0 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-text-primary text-center">
+              ¿A qué hora fue?
+            </h2>
+            <div className="flex justify-center">
+              <input
+                type="time"
+                value={form.time}
+                onChange={(e) => set('time', e.target.value)}
+                className="text-4xl font-bold text-center bg-surface-2 border-2 border-white/10
+                  rounded-2xl px-6 py-4 text-text-primary focus:outline-none
+                  focus:border-[var(--gaga-danger)] transition-colors w-full max-w-xs"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
           </div>
-        </Card>
-
-        {/* Glucose at episode */}
-        <Card className="p-4">
-          <GlucoseInput
-            label="Glucosa en el episodio (opcional pero recomendado)"
-            value={glucoseAtEpisode}
-            onChange={setGlucoseAtEpisode}
-          />
-        </Card>
-
-        {/* Symptoms chips */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-text-primary">Síntomas</h2>
-          <div className="flex flex-wrap gap-2">
-            {COMMON_SYMPTOMS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => toggleSymptom(s)}
-                className={[
-                  'px-3 py-2 rounded-full border text-sm transition-all',
-                  selectedSymptoms.includes(s)
-                    ? 'border-blue-500 bg-blue-500/20 text-blue-400'
-                    : 'border-border text-text-secondary hover:border-white/30',
-                ].join(' ')}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Otro síntoma..."
-              value={customSymptom}
-              onChange={(e) => setCustomSymptom(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomSymptom())}
-              className="flex-1 bg-background border border-border rounded-xl px-3 py-2 text-sm text-text-primary
-                focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-text-secondary/50"
-            />
-            <Button type="button" variant="secondary" size="sm" onClick={addCustomSymptom}>
-              +
-            </Button>
-          </div>
-        </Card>
-
-        {/* Intervention - required */}
-        <Card className="p-4 space-y-2">
-          <h2 className="font-semibold text-text-primary">Intervención *</h2>
-          <textarea
-            required
-            value={intervention}
-            onChange={(e) => setIntervention(e.target.value)}
-            placeholder="¿Qué tomaste? ¿Cuántos gramos? Ej: 15g de azúcar + 1 vaso de jugo..."
-            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-text-primary
-              focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500
-              placeholder:text-text-secondary/50 min-h-[80px] resize-none text-sm"
-          />
-        </Card>
-
-        {/* Post-intervention glucose */}
-        <Card className="p-4 space-y-3">
-          <h2 className="font-semibold text-text-primary">Después de la intervención</h2>
-          <GlucoseInput
-            label="Glucosa post-intervención (opcional)"
-            value={glucoseAfter}
-            onChange={setGlucoseAfter}
-          />
-          <Input
-            label="Tiempo de recuperación (minutos)"
-            type="number"
-            min={0}
-            value={recoveryTime}
-            onChange={(e) => setRecoveryTime(e.target.value)}
-            placeholder="15"
-          />
-        </Card>
-
-        {/* Notes */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-text-secondary">Notas (opcional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Observaciones adicionales..."
-            className="bg-background border border-border rounded-xl px-4 py-3 text-text-primary
-              focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-text-secondary/50
-              min-h-[60px] resize-none text-sm"
-          />
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-400 text-center">{error}</p>
         )}
 
-        <Button type="submit" variant="primary" size="lg" className="w-full" loading={submitting}>
-          <Zap size={20} className="mr-2" />
-          Registrar episodio
-        </Button>
-      </form>
+        {/* Step 1 — Glucose at episode */}
+        {step === 1 && (
+          <div className="space-y-5">
+            <h2 className="text-xl font-bold text-text-primary text-center">
+              ¿Te mediste durante el episodio?
+            </h2>
+            {/* Toggle */}
+            <div className="flex justify-center gap-3">
+              {['Sí, me medí', 'No me medí'].map((label, i) => {
+                const active = i === 0 ? form.glucoseEnabled : !form.glucoseEnabled;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => set('glucoseEnabled', i === 0)}
+                    className="px-5 py-2 rounded-full text-sm font-medium border-2 transition-all duration-150"
+                    style={{
+                      borderColor: active ? 'var(--gaga-danger)' : 'transparent',
+                      background: active ? 'rgba(248,113,113,0.15)' : 'var(--gaga-surface-2)',
+                      color: active ? 'var(--gaga-danger)' : 'var(--gaga-text-dim)',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Slider only if enabled */}
+            {form.glucoseEnabled && (
+              <div
+                style={{
+                  animation: 'fadeIn 200ms ease-out',
+                }}
+              >
+                <GlucoseSlider
+                  value={form.glucoseAtEpisode}
+                  onChange={(v) => set('glucoseAtEpisode', v)}
+                  min={10}
+                  max={300}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 2 — Severity */}
+        {step === 2 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-text-primary text-center">
+              ¿Qué tan severo fue?
+            </h2>
+            <SnappedSlider
+              options={SEVERITY_OPTIONS}
+              value={form.severity}
+              onChange={(v) => set('severity', v as EpisodeSeverity)}
+            />
+          </div>
+        )}
+
+        {/* Step 3 — Symptoms */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-text-primary text-center">
+              ¿Qué sentiste?
+            </h2>
+            <SymptomChips
+              selected={form.symptoms}
+              onChange={(v) => set('symptoms', v)}
+            />
+            {showSymptomsNote && (
+              <div style={{ animation: 'fadeIn 200ms ease-out' }}>
+                <textarea
+                  value={form.symptomsNote}
+                  onChange={(e) => set('symptomsNote', e.target.value)}
+                  placeholder="Algo más que quieras anotar..."
+                  className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
+                    text-text-primary placeholder:text-text-secondary/40 focus:outline-none
+                    focus:border-accent transition-colors resize-none min-h-[70px] text-sm mt-2"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4 — Intervention */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-text-primary text-center">
+              ¿Cómo lo resolviste?
+            </h2>
+            <PillSelect
+              options={INTERVENTION_OPTIONS}
+              value={form.interventionType}
+              onChange={(v) => set('interventionType', v)}
+            />
+            {form.interventionType === 'other' && (
+              <div style={{ animation: 'fadeIn 200ms ease-out' }}>
+                <textarea
+                  value={form.interventionNote}
+                  onChange={(e) => set('interventionNote', e.target.value)}
+                  placeholder="¿Qué hiciste exactamente?"
+                  className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
+                    text-text-primary placeholder:text-text-secondary/40 focus:outline-none
+                    focus:border-accent transition-colors resize-none min-h-[70px] text-sm"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 5 — Post-intervention */}
+        {step === 5 && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-text-primary text-center">
+              ¿Cómo quedaste después?
+            </h2>
+
+            {/* Post-glucose toggle */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-text-secondary text-center">
+                ¿Te mediste después? (opcional)
+              </p>
+              <div className="flex justify-center gap-3">
+                {(['Sí', 'No'] as const).map((label, i) => {
+                  const active = i === 0 ? form.postGlucoseEnabled : !form.postGlucoseEnabled;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => set('postGlucoseEnabled', i === 0)}
+                      className="px-5 py-2 rounded-full text-sm font-medium border-2 transition-all duration-150"
+                      style={{
+                        borderColor: active ? 'var(--gaga-success)' : 'transparent',
+                        background: active ? 'rgba(74,222,128,0.12)' : 'var(--gaga-surface-2)',
+                        color: active ? 'var(--gaga-success)' : 'var(--gaga-text-dim)',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.postGlucoseEnabled && (
+                <div style={{ animation: 'fadeIn 200ms ease-out' }}>
+                  <GlucoseSlider
+                    value={form.postGlucose}
+                    onChange={(v) => set('postGlucose', v)}
+                    min={10}
+                    max={400}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Recovery time snapped slider */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-text-secondary text-center">
+                ¿Cuánto tardaste en recuperarte? (opcional)
+              </p>
+              <SnappedSlider
+                options={RECOVERY_OPTIONS}
+                value={form.recoveryTime}
+                onChange={(v) => set('recoveryTime', v)}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-text-secondary">Notas (opcional)</p>
+              <textarea
+                value={form.notes}
+                onChange={(e) => set('notes', e.target.value)}
+                placeholder="Observaciones adicionales..."
+                className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
+                  text-text-primary placeholder:text-text-secondary/40 focus:outline-none
+                  focus:border-accent transition-colors resize-none min-h-[70px] text-sm"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom button */}
+      <div className="mt-6 pt-4">
+        {step < STEPS.length - 1 ? (
+          <button
+            onClick={() => goStep(step + 1)}
+            disabled={!canAdvance()}
+            className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2
+              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: 'var(--gaga-danger)', color: '#fff' }}
+          >
+            Siguiente
+            <ArrowRight size={18} />
+          </button>
+        ) : (
+          <button
+            ref={btnRef}
+            onClick={handleSubmit}
+            disabled={!canAdvance() || submitting}
+            className={`w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2
+              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed
+              ${shake ? 'animate-shake' : ''}`}
+            style={{ background: 'var(--gaga-danger)', color: '#fff' }}
+          >
+            {submitState === 'success' ? (
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 13l4 4L19 7" style={{ strokeDasharray: 100, strokeDashoffset: 0, animation: 'drawCheck 400ms ease-out forwards' }} />
+                </svg>
+                ¡Guardado!
+              </>
+            ) : submitting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Guardando…
+              </>
+            ) : (
+              'Registrar episodio 📋'
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

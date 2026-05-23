@@ -15,10 +15,14 @@ public class EpisodeMapper {
                 .episodeDate(entity.getEpisodeDate())
                 .episodeTime(entity.getEpisodeTime())
                 .symptoms(entity.getSymptoms())
+                .symptomsNote(entity.getSymptomsNote())
                 .glucoseAtEpisode(entity.getGlucoseAtEpisode())
                 .intervention(entity.getIntervention())
+                .interventionType(entity.getInterventionType())
+                .interventionNote(entity.getInterventionNote())
                 .glucoseAfterIntervention(entity.getGlucoseAfterIntervention())
                 .recoveryTimeMinutes(entity.getRecoveryTimeMinutes())
+                .recoveryTime(entity.getRecoveryTime())
                 .severity(entity.getSeverity())
                 .notes(entity.getNotes())
                 .createdAt(entity.getCreatedAt())
@@ -27,13 +31,19 @@ public class EpisodeMapper {
     }
 
     public void updateFromRequest(EpisodeRecord entity, EpisodeRequest request) {
-        entity.setEpisodeDate(request.getEpisodeDate());
+        if (request.getEpisodeDate() != null) {
+            entity.setEpisodeDate(request.getEpisodeDate());
+        }
         entity.setEpisodeTime(request.getEpisodeTime());
         entity.setSymptoms(request.getSymptoms() != null ? request.getSymptoms() : new java.util.ArrayList<>());
+        entity.setSymptomsNote(request.getSymptomsNote());
         entity.setGlucoseAtEpisode(request.getGlucoseAtEpisode());
         entity.setIntervention(request.getIntervention());
+        entity.setInterventionType(request.getInterventionType());
+        entity.setInterventionNote(request.getInterventionNote());
         entity.setGlucoseAfterIntervention(request.getGlucoseAfterIntervention());
         entity.setRecoveryTimeMinutes(request.getRecoveryTimeMinutes());
+        entity.setRecoveryTime(request.getRecoveryTime());
         entity.setSeverity(request.getSeverity());
         entity.setNotes(request.getNotes());
     }
