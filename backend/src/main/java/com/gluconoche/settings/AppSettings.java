@@ -45,6 +45,9 @@ public class AppSettings {
     @Column(name = "doctor_notes", columnDefinition = "TEXT")
     private String doctorNotes;
 
+    @Column(name = "last_unlocked_goal", nullable = false)
+    private int lastUnlockedGoal = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;

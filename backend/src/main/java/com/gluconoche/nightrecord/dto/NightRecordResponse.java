@@ -31,6 +31,9 @@ public class NightRecordResponse {
     private boolean physicalActivityToday;
     private StressLevel stressLevel;
     private String notes;
+    private String alcohol;
+    private String dinnerType;
+    private String exerciseLevel;
     private AttentionLevel attentionLevel;
     private List<String> attentionReasons;
     private List<EpisodeResponse> episodes;

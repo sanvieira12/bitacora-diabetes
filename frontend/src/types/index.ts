@@ -31,6 +31,9 @@ export interface NightRecord {
   physicalActivityToday: boolean;
   stressLevel: StressLevel;
   notes?: string;
+  alcohol?: string;
+  dinnerType?: string;
+  exerciseLevel?: string;
   attentionLevel: AttentionLevel;
   attentionReasons: string[];
   episodes?: EpisodeRecord[];
@@ -126,7 +129,6 @@ export interface DoctorSummary {
 }
 
 export interface NightRecordRequest {
-  date: string;
   glucoseBeforeSleep: number;
   glucoseWakeup?: number;
   hadBedtimeSnack: boolean;
@@ -137,6 +139,19 @@ export interface NightRecordRequest {
   physicalActivityToday: boolean;
   stressLevel: StressLevel;
   notes?: string;
+  alcohol?: string;
+  dinnerType?: string;
+  exerciseLevel?: string;
+}
+
+export interface ProgressData {
+  totalNights: number;
+  currentGoal: number;
+  previousGoal: number;
+  goalLabel: string;
+  percentComplete: number;
+  nightsToGo: number;
+  isNewGoalUnlocked: boolean;
 }
 
 export interface EpisodeRequest {

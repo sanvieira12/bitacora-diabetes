@@ -35,6 +35,9 @@ public class NightRecordMapper {
                 .physicalActivityToday(entity.isPhysicalActivityToday())
                 .stressLevel(entity.getStressLevel())
                 .notes(entity.getNotes())
+                .alcohol(entity.getAlcohol())
+                .dinnerType(entity.getDinnerType())
+                .exerciseLevel(entity.getExerciseLevel())
                 .attentionLevel(entity.getAttentionLevel())
                 .attentionReasons(entity.getAttentionReasons())
                 .episodes(episodeResponses)
@@ -60,7 +63,9 @@ public class NightRecordMapper {
     }
 
     public void updateFromRequest(NightRecord entity, NightRecordRequest request) {
-        entity.setDate(request.getDate());
+        if (request.getDate() != null) {
+            entity.setDate(request.getDate());
+        }
         entity.setGlucoseBeforeSleep(request.getGlucoseBeforeSleep());
         entity.setGlucoseWakeup(request.getGlucoseWakeup());
         entity.setHadBedtimeSnack(request.isHadBedtimeSnack());
@@ -71,5 +76,8 @@ public class NightRecordMapper {
         entity.setPhysicalActivityToday(request.isPhysicalActivityToday());
         entity.setStressLevel(request.getStressLevel());
         entity.setNotes(request.getNotes());
+        entity.setAlcohol(request.getAlcohol());
+        entity.setDinnerType(request.getDinnerType());
+        entity.setExerciseLevel(request.getExerciseLevel());
     }
 }

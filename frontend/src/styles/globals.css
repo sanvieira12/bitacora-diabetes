@@ -3,45 +3,139 @@
 @tailwind utilities;
 
 :root {
-  --color-background: #0f1419;
-  --color-surface: #1a2332;
-  --color-border: #2a3a4a;
-  --color-text-primary: #e2e8f0;
-  --color-text-secondary: #94a3b8;
-  --color-green: #4ade80;
+  --gaga-bg: #0a0a12;
+  --gaga-surface: #12121e;
+  --gaga-surface-2: #1c1c2e;
+  --gaga-accent: #f59e42;
+  --gaga-accent-soft: #fbbf7a;
+  --gaga-success: #4ade80;
+  --gaga-danger: #f87171;
+  --gaga-text: #e8e8f0;
+  --gaga-text-dim: #7070a0;
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* legacy aliases kept for backward compat with existing components */
+  --color-background: var(--gaga-bg);
+  --color-surface: var(--gaga-surface);
+  --color-border: #2a2a40;
+  --color-text-primary: var(--gaga-text);
+  --color-text-secondary: var(--gaga-text-dim);
+  --color-green: var(--gaga-success);
   --color-yellow: #fbbf24;
-  --color-red: #f87171;
+  --color-red: var(--gaga-danger);
   --color-blue: #3b82f6;
 }
 
-/* Force dark mode */
 html {
-  background-color: var(--color-background);
-  color: var(--color-text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--gaga-bg);
+  color: var(--gaga-text);
+  font-family: 'Geist', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background-color: var(--color-background);
+  background-color: var(--gaga-bg);
   margin: 0;
   padding: 0;
 }
 
-/* Better number input appearance */
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   opacity: 1;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Focus visible outline for accessibility */
 :focus-visible {
-  outline: 2px solid var(--color-blue);
+  outline: 2px solid var(--gaga-accent);
   outline-offset: 2px;
+}
+
+/* Active scale for all buttons */
+button:active,
+[role='button']:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease-out;
+}
+
+/* Input focus transitions */
+input,
+select,
+textarea {
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+/* Gradient progress bar fill animation */
+@keyframes progressFlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes starPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.3); }
+}
+
+@keyframes flipUp {
+  0%   { transform: translateY(0) rotateX(0deg);    opacity: 1; }
+  50%  { transform: translateY(-60%) rotateX(90deg); opacity: 0; }
+  51%  { transform: translateY(60%) rotateX(-90deg); opacity: 0; }
+  100% { transform: translateY(0) rotateX(0deg);    opacity: 1; }
+}
+
+@keyframes celebrationIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1);   }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0);   }
+  20%       { transform: translateX(-4px); }
+  40%       { transform: translateX(4px);  }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px);  }
+}
+
+@keyframes drawCheck {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0;   }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-24px); opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Particle burst for goal unlock */
+@keyframes particleBurst {
+  0%   { transform: translate(0, 0) scale(1);     opacity: 1; }
+  100% { transform: var(--tx, 0) var(--ty, 0) scale(0); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 200ms !important;
+    transition-property: opacity !important;
+  }
 }

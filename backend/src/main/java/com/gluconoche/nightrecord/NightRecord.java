@@ -67,6 +67,15 @@ public class NightRecord {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "alcohol", length = 20)
+    private String alcohol;
+
+    @Column(name = "dinner_type", length = 20)
+    private String dinnerType;
+
+    @Column(name = "exercise_level", length = 20)
+    private String exerciseLevel;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "attention_level", nullable = false, length = 10)
     private AttentionLevel attentionLevel;

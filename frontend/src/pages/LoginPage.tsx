@@ -126,7 +126,7 @@ export function LoginPage() {
               <Moon className="text-blue-400" size={32} />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary">GlucoNoche</h1>
+          <h1 className="text-2xl font-bold text-text-primary">GAGA</h1>
           <p className="text-sm text-text-secondary">Ingresá tu PIN para continuar</p>
         </div>
 

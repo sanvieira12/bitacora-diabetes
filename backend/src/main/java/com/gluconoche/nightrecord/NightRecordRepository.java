@@ -19,6 +19,8 @@ public interface NightRecordRepository extends JpaRepository<NightRecord, UUID> 
 
     Optional<NightRecord> findByPersonIdAndDate(UUID personId, LocalDate date);
 
+    long countByPersonId(UUID personId);
+
     List<NightRecord> findAllByPersonIdAndDateBetweenOrderByDateAsc(
             UUID personId, LocalDate from, LocalDate to);
 

@@ -16,7 +16,7 @@ export function Header() {
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <Moon className="text-blue-400" size={20} />
-          <span className="font-bold text-lg text-text-primary">GlucoNoche</span>
+          <span className="font-bold text-lg text-text-primary">GAGA</span>
         </Link>
 
         <div className="flex items-center gap-1">

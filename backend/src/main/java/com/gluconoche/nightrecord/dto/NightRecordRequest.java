@@ -11,12 +11,13 @@ import java.time.LocalTime;
 @Data
 public class NightRecordRequest {
 
-    @NotNull(message = "La fecha es obligatoria")
+    // Date is ignored on create; backend uses Uruguay local date.
+    // Kept for edit operations.
     private LocalDate date;
 
     @NotNull(message = "La glucosa antes de dormir es obligatoria")
-    @Min(value = 20, message = "La glucosa debe ser al menos 20 mg/dL")
-    @Max(value = 600, message = "La glucosa no puede superar 600 mg/dL")
+    @Min(value = 10, message = "La glucosa debe ser al menos 10 mg/dL")
+    @Max(value = 500, message = "La glucosa no puede superar 500 mg/dL")
     private Integer glucoseBeforeSleep;
 
     @Min(value = 20, message = "La glucosa al despertar debe ser al menos 20 mg/dL")
@@ -41,4 +42,10 @@ public class NightRecordRequest {
     private StressLevel stressLevel;
 
     private String notes;
+
+    private String alcohol;
+
+    private String dinnerType;
+
+    private String exerciseLevel;
 }

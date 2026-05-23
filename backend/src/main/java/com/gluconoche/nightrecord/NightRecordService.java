@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,10 +62,14 @@ public class NightRecordService {
     public NightRecordResponse create(NightRecordRequest request) {
         UUID personId = currentPersonProvider.getPersonId();
 
+        // Always use Uruguay local date for new records
+        LocalDate uruguayDate = ZonedDateTime.now(ZoneId.of("America/Montevideo")).toLocalDate();
+        request.setDate(uruguayDate);
+
         // Check for duplicate date
-        nightRecordRepository.findByPersonIdAndDate(personId, request.getDate()).ifPresent(existing -> {
+        nightRecordRepository.findByPersonIdAndDate(personId, uruguayDate).ifPresent(existing -> {
             throw new IllegalArgumentException(
-                "Ya existe un registro nocturno para la fecha " + request.getDate());
+                "Ya existe un registro nocturno para la fecha " + uruguayDate);
         });
 
         NightRecord record = new NightRecord();

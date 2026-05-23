@@ -1,4 +1,4 @@
-# GlucoNoche
+# GAGA
 
 Diario glucémico nocturno personal para el seguimiento de diabetes. Diseñado para uso individual, optimizado para registro rápido a la madrugada.
 
