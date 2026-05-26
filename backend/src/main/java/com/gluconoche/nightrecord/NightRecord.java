@@ -1,6 +1,5 @@
 package com.gluconoche.nightrecord;
 
-import com.gluconoche.common.JsonStringListConverter;
 import com.gluconoche.common.enums.AttentionLevel;
 import com.gluconoche.common.enums.SleepQuality;
 import com.gluconoche.common.enums.StressLevel;
@@ -9,7 +8,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -80,7 +81,7 @@ public class NightRecord {
     @Column(name = "attention_level", nullable = false, length = 10)
     private AttentionLevel attentionLevel;
 
-    @Convert(converter = JsonStringListConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attention_reasons", columnDefinition = "jsonb")
     private List<String> attentionReasons = new ArrayList<>();
 

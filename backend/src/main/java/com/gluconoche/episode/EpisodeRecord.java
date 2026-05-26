@@ -1,6 +1,5 @@
 package com.gluconoche.episode;
 
-import com.gluconoche.common.JsonStringListConverter;
 import com.gluconoche.common.enums.EpisodeSeverity;
 import com.gluconoche.nightrecord.NightRecord;
 import com.gluconoche.person.Person;
@@ -8,7 +7,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -41,7 +42,7 @@ public class EpisodeRecord {
     @Column(name = "episode_time", nullable = false)
     private LocalTime episodeTime;
 
-    @Convert(converter = JsonStringListConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "symptoms", nullable = false, columnDefinition = "jsonb")
     private List<String> symptoms = new ArrayList<>();
 
