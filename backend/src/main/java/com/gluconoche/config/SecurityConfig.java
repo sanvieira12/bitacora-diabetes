@@ -33,6 +33,8 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
+    @Value("${cors.allowed-origin-patterns:https://*.vercel.app,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173}")
+    private String allowedOriginPatterns;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -73,6 +75,10 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isBlank())
                 .toList();
+        List<String> originPatterns = Arrays.stream(allowedOriginPatterns.split(","))
+                .map(String::trim)
+                .filter(pattern -> !pattern.isBlank())
+                .toList();
 
         if (origins.isEmpty()) {
             origins = List.of(
@@ -81,9 +87,18 @@ public class SecurityConfig {
                     "https://bitacora-diabetes.vercel.app"
             );
         }
+        if (originPatterns.isEmpty()) {
+            originPatterns = List.of(
+                    "https://*.vercel.app",
+                    "http://localhost:5173",
+                    "http://localhost:5174",
+                    "http://127.0.0.1:5173"
+            );
+        }
 
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(origins);
+        configuration.setAllowedOriginPatterns(originPatterns);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         configuration.setExposedHeaders(List.of("Authorization"));
