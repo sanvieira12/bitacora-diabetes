@@ -1,41 +1,44 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { GlucoseSlider } from '../components/forms/GlucoseSlider';
 import { SnappedSlider } from '../components/forms/SnappedSlider';
 import { SymptomChips } from '../components/forms/SymptomChips';
 import { PillSelect } from '../components/forms/PillSelect';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { GlucoseOrb } from '../components/visual/GlucoseOrb';
 import { createEpisode } from '../api/episodes';
-import { nowTime } from '../lib/dateUtils';
+import { nowTime, today } from '../lib/dateUtils';
+import { formatDate, formatTime } from '../lib/formatters';
+import { glucoseToMedicalStatus } from '../lib/medicalVisualState';
 import type { EpisodeSeverity } from '../types';
 
 // ── Slider option sets ────────────────────────────────────────────────────────
 
 const SEVERITY_OPTIONS = [
-  { value: 'MILD',     label: '😰 Leve',     color: 'var(--gaga-accent)' },
-  { value: 'MODERATE', label: '😟 Moderado', color: '#fb923c' },
-  { value: 'SEVERE',   label: '🚨 Severo',   color: 'var(--gaga-danger)' },
+  { value: 'MILD',     label: 'Leve',     color: 'var(--gaga-accent)' },
+  { value: 'MODERATE', label: 'Moderado', color: '#fb923c' },
+  { value: 'SEVERE',   label: 'Severo',   color: 'var(--gaga-danger)' },
 ];
 
 const RECOVERY_OPTIONS = [
-  { value: 'FAST',      label: '⚡ < 15 min',    color: 'var(--gaga-success)' },
-  { value: 'NORMAL',    label: '🕐 15–30 min',   color: 'var(--gaga-accent)' },
-  { value: 'SLOW',      label: '⏳ 30–60 min',   color: '#fb923c' },
-  { value: 'VERY_SLOW', label: '🌙 + de 1 hora', color: 'var(--gaga-danger)' },
+  { value: 'FAST',      label: '< 15 min',    color: 'var(--gaga-success)' },
+  { value: 'NORMAL',    label: '15-30 min',   color: 'var(--gaga-accent)' },
+  { value: 'SLOW',      label: '30-60 min',   color: '#fb923c' },
+  { value: 'VERY_SLOW', label: '+ de 1 hora', color: 'var(--gaga-danger)' },
 ];
 
 const INTERVENTION_OPTIONS = [
-  { value: 'juice',        label: '🧃 Tomé jugo' },
-  { value: 'glucose_tabs', label: '💊 Comprimidos de glucosa' },
-  { value: 'candy',        label: '🍬 Comí algo dulce' },
-  { value: 'glucagon',     label: '💉 Glucagón' },
-  { value: 'nothing',      label: '🤷 Se pasó solo' },
-  { value: 'other',        label: '✏️ Otra cosa' },
+  { value: 'honey',        label: 'Miel' },
+  { value: 'candy',        label: 'Algo dulce' },
+  { value: 'sugar_water',  label: 'Agua con azúcar' },
 ];
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
-const STEPS = ['Hora', 'Glucosa', 'Severidad', 'Síntomas', 'Intervención', 'Después'];
+const STEPS = ['Glucosa', 'Severidad', 'Síntomas', 'Intervención', 'Después'];
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -52,6 +55,12 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
       ))}
     </div>
   );
+}
+
+function severityFromGlucose(value: number): EpisodeSeverity {
+  if (value < 54) return 'SEVERE';
+  if (value < 70) return 'MODERATE';
+  return 'MILD';
 }
 
 // ── Form state ────────────────────────────────────────────────────────────────
@@ -84,14 +93,16 @@ export function RegisterEpisodePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitState, setSubmitState] = useState<'idle' | 'success' | 'error'>('idle');
   const [shake, setShake] = useState(false);
+  const [episodeDate, setEpisodeDate] = useState(today());
+  const [isEditingDateTime, setIsEditingDateTime] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const [form, setForm] = useState<FormState>({
     time: nowTime(),
     glucoseAtEpisode: 55,
     glucoseEnabled: true,
-    severity: null,
-    symptoms: [],
+    severity: 'MODERATE',
+    symptoms: ['hipoglucemia'],
     symptomsNote: '',
     interventionType: null,
     interventionNote: '',
@@ -105,10 +116,9 @@ export function RegisterEpisodePage() {
     setForm((f) => ({ ...f, [key]: val }));
 
   const canAdvance = (): boolean => {
-    if (step === 0) return form.time.length >= 4;
-    if (step === 2 && form.severity === null) return false;
-    if (step === 3 && form.symptoms.length === 0) return false;
-    if (step === 4 && form.interventionType === null) return false;
+    if (step === 1 && form.severity === null) return false;
+    if (step === 2 && form.symptoms.length === 0) return false;
+    if (step === 3 && form.interventionType === null) return false;
     return true;
   };
 
@@ -125,25 +135,34 @@ export function RegisterEpisodePage() {
   const handleSubmit = async () => {
     if (!canAdvance() || submitting) return;
     setSubmitting(true);
+    const toastId = toast.loading('Guardando episodio...');
     if (btnRef.current) btnRef.current.style.transform = 'scale(0.97)';
     try {
       await createEpisode({
+        episodeDate,
         episodeTime: form.time,
         symptoms: form.symptoms,
         symptomsNote: form.symptomsNote || undefined,
         glucoseAtEpisode: form.glucoseEnabled ? form.glucoseAtEpisode : undefined,
         interventionType: form.interventionType ?? undefined,
-        interventionNote:
-          form.interventionType === 'other' ? form.interventionNote || undefined : undefined,
+        interventionNote: undefined,
         glucoseAfterIntervention: form.postGlucoseEnabled ? form.postGlucose : undefined,
         recoveryTime: form.recoveryTime ?? undefined,
         severity: form.severity ?? 'MILD',
         notes: form.notes || undefined,
         nightRecordId,
       });
+      toast.success('Episodio guardado', {
+        id: toastId,
+        description: 'Quedó asociado a tu bitácora nocturna.',
+      });
       setSubmitState('success');
       setTimeout(() => navigate(-1), 900);
     } catch {
+      toast.error('No se pudo guardar el episodio', {
+        id: toastId,
+        description: 'Revisá la conexión o intentá de nuevo.',
+      });
       setSubmitState('error');
       setShake(true);
       setTimeout(() => {
@@ -165,13 +184,17 @@ export function RegisterEpisodePage() {
   const showSymptomsNote =
     form.symptoms.length > 0 && !form.symptoms.includes('no_symptoms');
 
+  const visualStatus =
+    form.severity === 'SEVERE' ? 'severe' : form.glucoseEnabled ? glucoseToMedicalStatus(form.glucoseAtEpisode) : 'attention';
+  const automaticDate = episodeDate;
+
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)]">
+    <div className="flex min-h-[calc(100vh-120px)] flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-5 flex items-center justify-between">
         <button
           onClick={() => (step > 0 ? goStep(step - 1) : navigate(-1))}
-          className="p-2 rounded-xl hover:bg-white/5 transition-colors text-text-secondary"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/10 text-text-secondary transition hover:bg-white/15 hover:text-text-primary active:scale-95"
         >
           <ArrowLeft size={20} />
         </button>
@@ -183,33 +206,64 @@ export function RegisterEpisodePage() {
       </div>
 
       {/* Step content */}
-      <div
-        className={`flex-1 transition-all duration-250 ease-out ${slideClass}`}
+      <Card
+        className={`relative flex-1 overflow-hidden p-5 transition-all duration-300 ease-out ${slideClass}`}
         style={{ transitionProperty: 'opacity, transform' }}
       >
-        {/* Step 0 — Time */}
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-28 rounded-full bg-severeRed/10 blur-3xl" />
+        <div className="relative">
+        {/* Step 0 — Glucose at episode */}
         {step === 0 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-text-primary text-center">
-              ¿A qué hora fue?
-            </h2>
-            <div className="flex justify-center">
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => set('time', e.target.value)}
-                className="text-4xl font-bold text-center bg-surface-2 border-2 border-white/10
-                  rounded-2xl px-6 py-4 text-text-primary focus:outline-none
-                  focus:border-[var(--gaga-danger)] transition-colors w-full max-w-xs"
-                style={{ colorScheme: 'dark' }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Step 1 — Glucose at episode */}
-        {step === 1 && (
           <div className="space-y-5">
+            {form.glucoseEnabled && (
+              <GlucoseOrb value={form.glucoseAtEpisode} status={visualStatus} label="Durante episodio" size="sm" />
+            )}
+            <div className="rounded-3xl border border-severeRed/20 bg-severeRed/10 px-4 py-3 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-secondary">
+                Fecha y hora automáticas
+              </p>
+              <p className="mt-1 text-sm font-bold text-text-primary">
+                {formatDate(automaticDate)} · {formatTime(form.time)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingDateTime((prev) => {
+                  const next = !prev;
+                  if (!next) {
+                    setEpisodeDate(today());
+                    set('time', nowTime());
+                  }
+                  return next;
+                });
+              }}
+              className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-text-primary transition hover:bg-white/15"
+            >
+              {isEditingDateTime ? 'Usar fecha y hora automática' : 'Editar fecha y hora'}
+            </button>
+            {isEditingDateTime && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
+                  Fecha
+                  <input
+                    type="date"
+                    value={episodeDate}
+                    onChange={(e) => setEpisodeDate(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-transparent px-2 py-2 text-sm font-semibold normal-case tracking-normal text-text-primary outline-none focus:border-severeRed/60"
+                  />
+                </label>
+                <label className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
+                  Hora
+                  <input
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => set('time', e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-transparent px-2 py-2 text-sm font-semibold normal-case tracking-normal text-text-primary outline-none focus:border-severeRed/60"
+                  />
+                </label>
+              </div>
+            )}
             <h2 className="text-xl font-bold text-text-primary text-center">
               ¿Te mediste durante el episodio?
             </h2>
@@ -222,10 +276,10 @@ export function RegisterEpisodePage() {
                     key={label}
                     type="button"
                     onClick={() => set('glucoseEnabled', i === 0)}
-                    className="px-5 py-2 rounded-full text-sm font-medium border-2 transition-all duration-150"
+                    className="min-h-[44px] rounded-full border px-5 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
                     style={{
-                      borderColor: active ? 'var(--gaga-danger)' : 'transparent',
-                      background: active ? 'rgba(248,113,113,0.15)' : 'var(--gaga-surface-2)',
+                      borderColor: active ? 'rgba(251,113,133,0.42)' : 'rgba(255,255,255,0.1)',
+                      background: active ? 'rgba(251,113,133,0.14)' : 'rgba(255,255,255,0.08)',
                       color: active ? 'var(--gaga-danger)' : 'var(--gaga-text-dim)',
                     }}
                   >
@@ -243,17 +297,24 @@ export function RegisterEpisodePage() {
               >
                 <GlucoseSlider
                   value={form.glucoseAtEpisode}
-                  onChange={(v) => set('glucoseAtEpisode', v)}
+                  onChange={(v) =>
+                    setForm((current) => ({
+                      ...current,
+                      glucoseAtEpisode: v,
+                      severity: severityFromGlucose(v),
+                    }))
+                  }
                   min={10}
                   max={300}
+                  showValueDisplay={false}
                 />
               </div>
             )}
           </div>
         )}
 
-        {/* Step 2 — Severity */}
-        {step === 2 && (
+        {/* Step 1 — Severity */}
+        {step === 1 && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-text-primary text-center">
               ¿Qué tan severo fue?
@@ -266,8 +327,8 @@ export function RegisterEpisodePage() {
           </div>
         )}
 
-        {/* Step 3 — Symptoms */}
-        {step === 3 && (
+        {/* Step 2 — Symptoms */}
+        {step === 2 && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-text-primary text-center">
               ¿Qué sentiste?
@@ -282,7 +343,7 @@ export function RegisterEpisodePage() {
                   value={form.symptomsNote}
                   onChange={(e) => set('symptomsNote', e.target.value)}
                   placeholder="Algo más que quieras anotar..."
-                  className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
+                  className="glass-input w-full rounded-2xl border border-white/10 px-4 py-3
                     text-text-primary placeholder:text-text-secondary/40 focus:outline-none
                     focus:border-accent transition-colors resize-none min-h-[70px] text-sm mt-2"
                 />
@@ -291,8 +352,8 @@ export function RegisterEpisodePage() {
           </div>
         )}
 
-        {/* Step 4 — Intervention */}
-        {step === 4 && (
+        {/* Step 3 — Intervention */}
+        {step === 3 && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-text-primary text-center">
               ¿Cómo lo resolviste?
@@ -302,23 +363,11 @@ export function RegisterEpisodePage() {
               value={form.interventionType}
               onChange={(v) => set('interventionType', v)}
             />
-            {form.interventionType === 'other' && (
-              <div style={{ animation: 'fadeIn 200ms ease-out' }}>
-                <textarea
-                  value={form.interventionNote}
-                  onChange={(e) => set('interventionNote', e.target.value)}
-                  placeholder="¿Qué hiciste exactamente?"
-                  className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
-                    text-text-primary placeholder:text-text-secondary/40 focus:outline-none
-                    focus:border-accent transition-colors resize-none min-h-[70px] text-sm"
-                />
-              </div>
-            )}
           </div>
         )}
 
-        {/* Step 5 — Post-intervention */}
-        {step === 5 && (
+        {/* Step 4 — Post-intervention */}
+        {step === 4 && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-text-primary text-center">
               ¿Cómo quedaste después?
@@ -337,10 +386,10 @@ export function RegisterEpisodePage() {
                       key={label}
                       type="button"
                       onClick={() => set('postGlucoseEnabled', i === 0)}
-                      className="px-5 py-2 rounded-full text-sm font-medium border-2 transition-all duration-150"
+                    className="min-h-[44px] rounded-full border px-5 py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
                       style={{
-                        borderColor: active ? 'var(--gaga-success)' : 'transparent',
-                        background: active ? 'rgba(74,222,128,0.12)' : 'var(--gaga-surface-2)',
+                        borderColor: active ? 'rgba(110,231,183,0.42)' : 'rgba(255,255,255,0.1)',
+                        background: active ? 'rgba(110,231,183,0.12)' : 'rgba(255,255,255,0.08)',
                         color: active ? 'var(--gaga-success)' : 'var(--gaga-text-dim)',
                       }}
                     >
@@ -380,37 +429,37 @@ export function RegisterEpisodePage() {
                 value={form.notes}
                 onChange={(e) => set('notes', e.target.value)}
                 placeholder="Observaciones adicionales..."
-                className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
+                className="glass-input w-full rounded-2xl border border-white/10 px-4 py-3
                   text-text-primary placeholder:text-text-secondary/40 focus:outline-none
                   focus:border-accent transition-colors resize-none min-h-[70px] text-sm"
               />
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </Card>
 
       {/* Bottom button */}
       <div className="mt-6 pt-4">
         {step < STEPS.length - 1 ? (
-          <button
+          <Button
             onClick={() => goStep(step + 1)}
             disabled={!canAdvance()}
-            className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2
-              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: 'var(--gaga-danger)', color: '#fff' }}
+            className="w-full"
+            size="lg"
+            variant={visualStatus === 'severe' ? 'danger' : 'primary'}
           >
             Siguiente
             <ArrowRight size={18} />
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             ref={btnRef}
             onClick={handleSubmit}
             disabled={!canAdvance() || submitting}
-            className={`w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2
-              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed
-              ${shake ? 'animate-shake' : ''}`}
-            style={{ background: 'var(--gaga-danger)', color: '#fff' }}
+            className={`w-full ${shake ? 'animate-shake' : ''}`}
+            size="lg"
+            variant={visualStatus === 'severe' ? 'danger' : 'primary'}
           >
             {submitState === 'success' ? (
               <>
@@ -425,9 +474,9 @@ export function RegisterEpisodePage() {
                 Guardando…
               </>
             ) : (
-              'Registrar episodio 📋'
+              'Registrar episodio'
             )}
-          </button>
+          </Button>
         )}
       </div>
     </div>

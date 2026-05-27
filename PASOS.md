@@ -44,7 +44,7 @@ Verificar que arrancó bien:
 
 ```bash
 docker ps
-# Debe aparecer: gluconoche-postgres   Up   0.0.0.0:5432->5432/tcp
+# Debe aparecer: gluconoche-postgres   Up   0.0.0.0:5433->5432/tcp
 ```
 
 ### Paso 1.3 — Arrancar el backend
@@ -65,8 +65,8 @@ Si Flyway da error, probablemente Postgres no terminó de iniciar. Esperar 10 se
 Verificar que el backend responde:
 
 ```bash
-curl http://localhost:8080/api/settings
-# Debe devolver JSON con los umbrales de glucosa
+curl http://localhost:8081/api/health
+# Debe devolver {"status":"ok","app":"gluconoche"}
 ```
 
 ### Paso 1.4 — Arrancar el frontend
@@ -149,9 +149,9 @@ Opción más simple para empezar (todo gratuito o muy barato):
 
 Alternativas: Fly.io + Neon.tech para DB, o Render.
 
-### Paso 3.2 — Dockerizar el backend
+### Paso 3.2 — Verificar Dockerfile del backend
 
-Crear `backend/Dockerfile`:
+El proyecto ya incluye `backend/Dockerfile`:
 
 ```dockerfile
 # Stage 1: build
@@ -166,7 +166,7 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
-EXPOSE 8080
+EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
@@ -195,14 +195,16 @@ VITE_API_URL=https://<tu-dominio-backend>
 
 ### Paso 3.4 — CORS en producción
 
-Editar [CorsConfig.java](backend/src/main/java/com/gluconoche/config/CorsConfig.java) para agregar el dominio de producción del frontend:
+Configurar `CORS_ALLOWED_ORIGINS` con los orígenes separados por coma. En local el default es:
 
-```java
-config.setAllowedOrigins(List.of(
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://tu-frontend.vercel.app"  // agregar esto
-));
+```text
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+```
+
+Cuando exista el dominio de Vercel, agregarlo a esa misma variable:
+
+```text
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://tu-frontend.vercel.app
 ```
 
 ### Paso 3.5 — Deploy del backend en Railway
@@ -249,7 +251,7 @@ Repetir la recorrida del Paso 1.5 con la URL de producción.
 
 ### Prioridad baja
 
-- [ ] **Autenticación** — si la app sale de la red local o se hostea en internet público, agregar un PIN o contraseña simple
+- [ ] **Autenticación** — endurecer el flujo actual de PIN/JWT para producción si queda expuesto a internet público
 - [ ] **Backup manual** — botón en la UI para descargar todos los datos como CSV (ya está el endpoint, solo agregar botón de "backup completo")
 - [ ] **Integración con sensor continuo** — si Juana usa un CGM como Libre o Dexcom, se puede importar datos vía su API
 

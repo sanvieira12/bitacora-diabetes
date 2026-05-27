@@ -1,12 +1,12 @@
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
+  Area,
+  AreaChart,
   CartesianGrid,
-  Tooltip,
   ReferenceLine,
   ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import type { GlucoseTrendPoint } from '../../types';
 
@@ -18,6 +18,16 @@ interface GlucoseLineChartProps {
   highThreshold?: number;
 }
 
+function GlassTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number }>; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-2xl border border-white/10 bg-night-950/85 px-3 py-2 shadow-glass backdrop-blur-xl">
+      <p className="text-xs font-medium text-text-secondary">{label}</p>
+      <p className="mt-1 text-sm font-bold text-text-primary">{payload[0].value}</p>
+    </div>
+  );
+}
+
 export function GlucoseLineChart({
   data,
   lowThreshold = 100,
@@ -27,48 +37,54 @@ export function GlucoseLineChart({
 }: GlucoseLineChartProps) {
   const chartData = data.map((d) => ({
     ...d,
-    date: d.date.slice(5), // show MM-DD
+    date: d.date.slice(5),
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={chartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4a" />
+    <ResponsiveContainer width="100%" height={270}>
+      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
+        <defs>
+          <linearGradient id="glucoseStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#6ee7b7" />
+            <stop offset="55%" stopColor="#63b3ff" />
+            <stop offset="100%" stopColor="#93c5fd" />
+          </linearGradient>
+          <linearGradient id="glucoseFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#63b3ff" stopOpacity={0.24} />
+            <stop offset="65%" stopColor="#63b3ff" stopOpacity={0.05} />
+            <stop offset="100%" stopColor="#63b3ff" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
         <XAxis
           dataKey="date"
-          tick={{ fill: '#94a3b8', fontSize: 11 }}
+          tick={{ fill: '#9ca9c6', fontSize: 11 }}
           tickLine={false}
-          axisLine={{ stroke: '#2a3a4a' }}
+          axisLine={false}
         />
         <YAxis
-          tick={{ fill: '#94a3b8', fontSize: 11 }}
+          tick={{ fill: '#9ca9c6', fontSize: 11 }}
           tickLine={false}
-          axisLine={{ stroke: '#2a3a4a' }}
+          axisLine={false}
           domain={[40, 350]}
         />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: '#1a2332',
-            border: '1px solid #2a3a4a',
-            borderRadius: '12px',
-            color: '#e2e8f0',
-          }}
-          formatter={(value: number) => [`${value} mg/dL`, 'Glucosa']}
-        />
-        {/* Reference lines for thresholds */}
+        <Tooltip content={<GlassTooltip />} cursor={{ stroke: 'rgba(147,197,253,0.22)', strokeWidth: 1 }} />
         <ReferenceLine y={lowThreshold} stroke="#fbbf24" strokeDasharray="4 4" label={{ value: 'Baja', fill: '#fbbf24', fontSize: 10 }} />
-        <ReferenceLine y={targetMin} stroke="#4ade80" strokeDasharray="4 4" />
-        <ReferenceLine y={targetMax} stroke="#4ade80" strokeDasharray="4 4" label={{ value: 'Rango objetivo', fill: '#4ade80', fontSize: 10 }} />
-        <ReferenceLine y={highThreshold} stroke="#f87171" strokeDasharray="4 4" label={{ value: 'Alta', fill: '#f87171', fontSize: 10 }} />
-        <Line
+        <ReferenceLine y={targetMin} stroke="#6ee7b7" strokeDasharray="4 4" />
+        <ReferenceLine y={targetMax} stroke="#6ee7b7" strokeDasharray="4 4" label={{ value: 'Objetivo', fill: '#6ee7b7', fontSize: 10 }} />
+        <ReferenceLine y={highThreshold} stroke="#fb7185" strokeDasharray="4 4" label={{ value: 'Alta', fill: '#fb7185', fontSize: 10 }} />
+        <Area
           type="monotone"
           dataKey="glucoseBeforeSleep"
-          stroke="#3b82f6"
-          strokeWidth={2}
-          dot={{ fill: '#3b82f6', r: 4 }}
-          activeDot={{ r: 6, fill: '#60a5fa' }}
+          stroke="url(#glucoseStroke)"
+          strokeWidth={3}
+          fill="url(#glucoseFill)"
+          dot={{ fill: '#050816', stroke: '#93c5fd', strokeWidth: 2, r: 4 }}
+          activeDot={{ r: 6, fill: '#63b3ff', stroke: '#dbeafe', strokeWidth: 2 }}
+          animationDuration={900}
+          animationEasing="ease-out"
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

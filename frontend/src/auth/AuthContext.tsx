@@ -1,18 +1,6 @@
-import React, { createContext, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { authApi } from '../api/auth';
-
-export const TOKEN_KEY = 'gluconoche_token';
-const MUST_CHANGE_KEY = 'gluconoche_must_change';
-
-interface AuthContextType {
-  isAuthenticated: boolean;
-  mustChangePin: boolean;
-  login: (pin: string) => Promise<void>;
-  logout: () => void;
-  changePin: (currentPin: string, newPin: string) => Promise<void>;
-}
-
-export const AuthContext = createContext<AuthContextType | null>(null);
+import { AuthContext, MUST_CHANGE_KEY, TOKEN_KEY } from './authContextValue';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(

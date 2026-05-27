@@ -1,43 +1,44 @@
-import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Clock3 } from 'lucide-react';
+import { toast } from 'sonner';
 import { GlucoseSlider } from '../components/forms/GlucoseSlider';
 import { PillSelect } from '../components/forms/PillSelect';
-import { createNightRecord } from '../api/nightRecords';
-import type { SleepQuality, StressLevel } from '../types';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { GlucoseOrb } from '../components/visual/GlucoseOrb';
+import { createNightRecord, getNightRecord, updateNightRecord } from '../api/nightRecords';
+import { glucoseToMedicalStatus } from '../lib/medicalVisualState';
+import { formatDate, formatTime } from '../lib/formatters';
+import { nowTime, today } from '../lib/dateUtils';
+import type { NightRecord, NightRecordRequest, StressLevel } from '../types';
 
 const ALCOHOL_OPTIONS = [
-  { value: 'none',     label: '🚫 Cero alcoholes' },
-  { value: 'little',  label: '🍷 Algo tomé' },
-  { value: 'moderate',label: '🍻 Bastante' },
-  { value: 'a_lot',   label: '🫠 Demasiado, obvio' },
+  { value: 'none',     label: 'Sin alcohol' },
+  { value: 'little',  label: 'Cantidad baja' },
+  { value: 'moderate',label: 'Cantidad moderada' },
+  { value: 'a_lot',   label: 'Cantidad alta' },
 ];
 
 const DINNER_OPTIONS = [
-  { value: 'nothing',    label: '😶 No comí nada' },
-  { value: 'light',      label: '🥗 Comí liviano' },
-  { value: 'normal',     label: '🍽️ Normal' },
-  { value: 'heavy',      label: '🤤 Me pasé un poco' },
-  { value: 'very_heavy', label: '💀 Me mandé una bestialidad' },
+  { value: 'nothing',    label: 'No cené' },
+  { value: 'light',      label: 'Cena liviana' },
+  { value: 'normal',     label: 'Cena normal' },
+  { value: 'heavy',      label: 'Cena pesada' },
+  { value: 'very_heavy', label: 'Cena muy pesada' },
 ];
 
 const EXERCISE_OPTIONS = [
-  { value: 'none',     label: '🛋️ Sofá mode activado' },
-  { value: 'light',   label: '🚶 Algo moví el cuerpo' },
-  { value: 'moderate',label: '🚴 Ejercité bien' },
-  { value: 'intense', label: '🏋️ Entrenamiento de combate' },
-];
-
-const SLEEP_OPTIONS = [
-  { value: 'GOOD', label: '😴 Buena' },
-  { value: 'FAIR', label: '😐 Regular' },
-  { value: 'POOR', label: '😩 Mala' },
+  { value: 'none',     label: 'Sin ejercicio' },
+  { value: 'light',   label: 'Actividad liviana' },
+  { value: 'moderate',label: 'Actividad moderada' },
+  { value: 'intense', label: 'Actividad intensa' },
 ];
 
 const STRESS_OPTIONS = [
-  { value: 'LOW',    label: '😌 Bajo' },
-  { value: 'MEDIUM', label: '😤 Moderado' },
-  { value: 'HIGH',   label: '🤯 Alto' },
+  { value: 'LOW',    label: 'Bajo' },
+  { value: 'MEDIUM', label: 'Moderado' },
+  { value: 'HIGH',   label: 'Alto' },
 ];
 
 interface FormState {
@@ -46,12 +47,11 @@ interface FormState {
   alcohol: string | null;
   dinnerType: string | null;
   exerciseLevel: string | null;
-  sleepQuality: SleepQuality | null;
   stressLevel: StressLevel | null;
   notes: string;
 }
 
-const STEPS = ['Glucosa', 'Hora', 'Alcohol', 'Cena', 'Ejercicio', 'Sueño'];
+const STEPS = ['Glucosa', 'Contexto', 'Detalles'];
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -72,33 +72,65 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 
 export function RegisterNightPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [animating, setAnimating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitState, setSubmitState] = useState<'idle' | 'success' | 'error'>('idle');
   const [shake, setShake] = useState(false);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<NightRecord | null>(null);
+  const [recordDate, setRecordDate] = useState(today());
+  const [isEditingDateTime, setIsEditingDateTime] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const [form, setForm] = useState<FormState>({
     glucoseBeforeSleep: 120,
-    bedtime: '23:00',
-    alcohol: null,
-    dinnerType: null,
-    exerciseLevel: null,
-    sleepQuality: null,
-    stressLevel: null,
+    bedtime: nowTime(),
+    alcohol: 'none',
+    dinnerType: 'normal',
+    exerciseLevel: 'none',
+    stressLevel: 'MEDIUM',
     notes: '',
   });
+
+  useEffect(() => {
+    if (!editId) {
+      setEditingRecord(null);
+      setRecordDate(today());
+      return;
+    }
+
+    setLoadingRecord(true);
+    getNightRecord(editId)
+      .then((record) => {
+        setEditingRecord(record);
+        setRecordDate(record.date);
+        setForm({
+          glucoseBeforeSleep: record.glucoseBeforeSleep,
+          bedtime: formatTime(record.bedtime),
+          alcohol: record.alcohol ?? 'none',
+          dinnerType: record.dinnerType ?? 'normal',
+          exerciseLevel: record.exerciseLevel ?? (record.physicalActivityToday ? 'moderate' : 'none'),
+          stressLevel: record.stressLevel,
+          notes: record.notes ?? '',
+        });
+      })
+      .catch((error: Error) => {
+        toast.error('No se pudo cargar el registro', {
+          description: error.message,
+        });
+        navigate('/historial', { replace: true });
+      })
+      .finally(() => setLoadingRecord(false));
+  }, [editId, navigate]);
 
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
 
   const canAdvance = (): boolean => {
-    if (step === 2 && form.alcohol === null) return false;
-    if (step === 3 && form.dinnerType === null) return false;
-    if (step === 4 && form.exerciseLevel === null) return false;
-    if (step === 5 && (form.sleepQuality === null || form.stressLevel === null)) return false;
     return true;
   };
 
@@ -115,23 +147,40 @@ export function RegisterNightPage() {
   const handleSubmit = async () => {
     if (!canAdvance() || submitting) return;
     setSubmitting(true);
+    const isEditing = Boolean(editId);
+    const toastId = toast.loading(isEditing ? 'Guardando cambios...' : 'Guardando registro nocturno...');
     if (btnRef.current) btnRef.current.style.transform = 'scale(0.97)';
     try {
-      await createNightRecord({
+      const request: NightRecordRequest = {
+        date: recordDate,
         glucoseBeforeSleep: form.glucoseBeforeSleep,
+        glucoseWakeup: editingRecord?.glucoseWakeup,
         bedtime: form.bedtime,
-        hadBedtimeSnack: false,
-        sleepQuality: form.sleepQuality ?? 'GOOD',
+        wakeTime: editingRecord?.wakeTime,
+        hadBedtimeSnack: editingRecord?.hadBedtimeSnack ?? false,
+        snackDescription: editingRecord?.snackDescription,
+        sleepQuality: editingRecord?.sleepQuality ?? 'GOOD',
         physicalActivityToday: form.exerciseLevel !== 'none' && form.exerciseLevel !== null,
         stressLevel: form.stressLevel ?? 'LOW',
         notes: form.notes || undefined,
         alcohol: form.alcohol ?? undefined,
         dinnerType: form.dinnerType ?? undefined,
         exerciseLevel: form.exerciseLevel ?? undefined,
+      };
+      const saved = editId
+        ? await updateNightRecord(editId, request)
+        : await createNightRecord(request);
+      toast.success(isEditing ? 'Registro actualizado' : 'Registro nocturno guardado', {
+        id: toastId,
+        description: 'Quedó sincronizado en tu bitácora.',
       });
       setSubmitState('success');
-      setTimeout(() => navigate('/'), 900);
+      setTimeout(() => navigate(isEditing ? `/historial/${saved.id}` : '/'), 900);
     } catch {
+      toast.error(isEditing ? 'No se pudieron guardar los cambios' : 'No se pudo guardar la noche', {
+        id: toastId,
+        description: 'Revisá la conexión o intentá de nuevo en unos segundos.',
+      });
       setSubmitState('error');
       setShake(true);
       setTimeout(() => {
@@ -150,13 +199,24 @@ export function RegisterNightPage() {
       : 'opacity-0 translate-x-4'
     : 'opacity-100 translate-x-0';
 
+  const visualStatus = glucoseToMedicalStatus(form.glucoseBeforeSleep);
+  const automaticDate = recordDate;
+
+  if (loadingRecord) {
+    return (
+      <div className="grid min-h-[calc(100vh-120px)] place-items-center text-sm text-text-secondary">
+        Cargando registro...
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)]">
+    <div className="flex min-h-[calc(100vh-120px)] flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-5 flex items-center justify-between">
         <button
           onClick={() => (step > 0 ? goStep(step - 1) : navigate(-1))}
-          className="p-2 rounded-xl hover:bg-white/5 transition-colors text-text-secondary"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/10 text-text-secondary transition hover:bg-white/15 hover:text-text-primary active:scale-95"
         >
           <ArrowLeft size={20} />
         </button>
@@ -164,16 +224,27 @@ export function RegisterNightPage() {
           <span className="text-xs text-text-secondary font-medium">{STEPS[step]}</span>
           <StepIndicator current={step} total={STEPS.length} />
         </div>
-        <div className="w-9" />
+        <button
+          type="button"
+          onClick={() => navigate('/registro-rapido')}
+          className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/10 text-text-secondary transition hover:text-medicalBlue"
+          aria-label="Ir a registro rápido"
+          title="Registro rápido"
+        >
+          <Clock3 size={17} />
+        </button>
       </div>
 
       {/* Step content */}
-      <div
-        className={`flex-1 transition-all duration-250 ease-out ${slideClass}`}
+      <Card
+        className={`relative flex-1 overflow-hidden p-5 transition-all duration-300 ease-out ${slideClass}`}
         style={{ transitionProperty: 'opacity, transform' }}
       >
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-28 rounded-full bg-medicalBlue/10 blur-3xl" />
+        <div className="relative">
         {step === 0 && (
           <div className="space-y-4">
+            <GlucoseOrb value={form.glucoseBeforeSleep} status={visualStatus} label="Antes de dormir" size="sm" />
             <h2 className="text-xl font-bold text-text-primary text-center">
               ¿Cuánto tenés de glucosa?
             </h2>
@@ -181,81 +252,94 @@ export function RegisterNightPage() {
             <GlucoseSlider
               value={form.glucoseBeforeSleep}
               onChange={(v) => set('glucoseBeforeSleep', v)}
+              showValueDisplay={false}
             />
           </div>
         )}
 
         {step === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <h2 className="text-xl font-bold text-text-primary text-center">
-              ¿A qué hora te vas a dormir?
+              Contexto rápido
             </h2>
-            <div className="flex justify-center">
-              <input
-                type="time"
-                value={form.bedtime}
-                onChange={(e) => set('bedtime', e.target.value)}
-                className="text-4xl font-bold text-center bg-surface-2 border-2 border-white/10
-                  rounded-2xl px-6 py-4 text-text-primary focus:outline-none focus:border-accent
-                  transition-colors w-full max-w-xs"
-                style={{ colorScheme: 'dark' }}
+            <div className="rounded-3xl border border-medicalBlue/20 bg-medicalBlue/10 px-4 py-3 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-secondary">
+                Fecha y hora automáticas
+              </p>
+              <p className="mt-1 text-sm font-bold text-text-primary">
+                {formatDate(automaticDate)} · {formatTime(form.bedtime)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingDateTime((prev) => {
+                  const next = !prev;
+                  if (!next) {
+                    setRecordDate(editingRecord?.date ?? today());
+                    set('bedtime', editingRecord ? formatTime(editingRecord.bedtime) : nowTime());
+                  }
+                  return next;
+                });
+              }}
+              className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-text-primary transition hover:bg-white/15"
+            >
+              {isEditingDateTime ? 'Usar fecha y hora automática' : 'Editar fecha y hora'}
+            </button>
+            {isEditingDateTime && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
+                  Fecha
+                  <input
+                    type="date"
+                    value={recordDate}
+                    onChange={(e) => setRecordDate(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-transparent px-2 py-2 text-sm font-semibold normal-case tracking-normal text-text-primary outline-none focus:border-medicalBlue/60"
+                  />
+                </label>
+                <label className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
+                  Hora
+                  <input
+                    type="time"
+                    value={form.bedtime}
+                    onChange={(e) => set('bedtime', e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-transparent px-2 py-2 text-sm font-semibold normal-case tracking-normal text-text-primary outline-none focus:border-medicalBlue/60"
+                  />
+                </label>
+              </div>
+            )}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-text-secondary">Alcohol</p>
+              <PillSelect
+                options={ALCOHOL_OPTIONS}
+                value={form.alcohol}
+                onChange={(v) => set('alcohol', v)}
+              />
+            </div>
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-text-secondary">Cena</p>
+              <PillSelect
+                options={DINNER_OPTIONS}
+                value={form.dinnerType}
+                onChange={(v) => set('dinnerType', v)}
+              />
+            </div>
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-text-secondary">Actividad física</p>
+              <PillSelect
+                options={EXERCISE_OPTIONS}
+                value={form.exerciseLevel}
+                onChange={(v) => set('exerciseLevel', v)}
               />
             </div>
           </div>
         )}
 
         {step === 2 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-text-primary text-center">
-              ¿Tomaste alcohol?
-            </h2>
-            <PillSelect
-              options={ALCOHOL_OPTIONS}
-              value={form.alcohol}
-              onChange={(v) => set('alcohol', v)}
-            />
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-text-primary text-center">
-              ¿Cómo fue la cena?
-            </h2>
-            <PillSelect
-              options={DINNER_OPTIONS}
-              value={form.dinnerType}
-              onChange={(v) => set('dinnerType', v)}
-            />
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-text-primary text-center">
-              ¿Hiciste ejercicio hoy?
-            </h2>
-            <PillSelect
-              options={EXERCISE_OPTIONS}
-              value={form.exerciseLevel}
-              onChange={(v) => set('exerciseLevel', v)}
-            />
-          </div>
-        )}
-
-        {step === 5 && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-text-primary text-center">
               Últimos detalles
             </h2>
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-text-secondary">Calidad del sueño</label>
-              <PillSelect
-                options={SLEEP_OPTIONS}
-                value={form.sleepQuality}
-                onChange={(v) => set('sleepQuality', v as SleepQuality)}
-              />
-            </div>
             <div className="space-y-3">
               <label className="block text-sm font-medium text-text-secondary">Nivel de estrés</label>
               <PillSelect
@@ -270,37 +354,35 @@ export function RegisterNightPage() {
                 value={form.notes}
                 onChange={(e) => set('notes', e.target.value)}
                 placeholder="Cualquier observación..."
-                className="w-full bg-surface-2 border border-white/10 rounded-xl px-4 py-3
+                className="glass-input w-full rounded-2xl border border-white/10 px-4 py-3
                   text-text-primary placeholder:text-text-secondary/40 focus:outline-none
                   focus:border-accent transition-colors resize-none min-h-[80px]"
               />
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </Card>
 
       {/* Bottom button */}
       <div className="mt-6 pt-4">
         {step < STEPS.length - 1 ? (
-          <button
+          <Button
             onClick={() => goStep(step + 1)}
             disabled={!canAdvance()}
-            className="w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2
-              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: 'var(--gaga-accent)', color: '#0a0a12' }}
+            className="w-full"
+            size="lg"
           >
             Siguiente
             <ArrowRight size={18} />
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             ref={btnRef}
             onClick={handleSubmit}
             disabled={!canAdvance() || submitting}
-            className={`w-full py-4 rounded-2xl font-semibold text-base flex items-center justify-center gap-2
-              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed
-              ${shake ? 'animate-shake' : ''}`}
-            style={{ background: 'var(--gaga-accent)', color: '#0a0a12' }}
+            className={`w-full ${shake ? 'animate-shake' : ''}`}
+            size="lg"
           >
             {submitState === 'success' ? (
               <>
@@ -322,9 +404,9 @@ export function RegisterNightPage() {
                 Guardando…
               </>
             ) : (
-              <>Registrar noche ✨</>
+              <>{editId ? 'Guardar cambios' : 'Registrar noche'}</>
             )}
-          </button>
+          </Button>
         )}
       </div>
     </div>

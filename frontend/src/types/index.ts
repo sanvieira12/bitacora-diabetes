@@ -133,6 +133,7 @@ export interface DoctorSummary {
 }
 
 export interface NightRecordRequest {
+  date?: string;
   glucoseBeforeSleep: number;
   glucoseWakeup?: number;
   hadBedtimeSnack: boolean;
@@ -159,10 +160,12 @@ export interface ProgressData {
 }
 
 export interface EpisodeRequest {
+  episodeDate?: string;
   episodeTime: string;
   symptoms: string[];
   symptomsNote?: string;
   glucoseAtEpisode?: number;
+  intervention?: string;
   interventionType?: string;
   interventionNote?: string;
   glucoseAfterIntervention?: number;

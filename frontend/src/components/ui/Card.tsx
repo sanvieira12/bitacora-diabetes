@@ -1,22 +1,29 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { cn } from '../../lib/cn';
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
-export function Card({ children, className = '', onClick }: CardProps) {
+export function Card({ children, className = '', onClick, style }: CardProps) {
   return (
-    <div
-      className={[
-        'bg-surface border border-border rounded-2xl shadow-lg',
-        onClick ? 'cursor-pointer hover:border-blue-500/50 transition-colors' : '',
-        className,
-      ].join(' ')}
+    <motion.div
+      whileHover={onClick ? { y: -2 } : undefined}
+      whileTap={onClick ? { scale: 0.985 } : undefined}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
+      className={cn(
+        'glass-panel rounded-3xl',
+        onClick && 'cursor-pointer transition-colors hover:border-medicalBlue/35',
+        className
+      )}
       onClick={onClick}
+      style={style}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }

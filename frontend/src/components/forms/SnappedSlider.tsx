@@ -41,18 +41,17 @@ export function SnappedSlider({ options, value, onChange }: Props) {
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className="flex flex-col items-center gap-1 flex-1 transition-all duration-150"
+            className="flex min-h-[54px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/5 px-2 transition-all duration-200 active:scale-[0.98]"
             style={{
-              opacity: value === null || value === opt.value ? 1 : 0.4,
-              transform: value === opt.value ? 'scale(1.05)' : 'scale(1)',
+              opacity: value === null || value === opt.value ? 1 : 0.72,
+              boxShadow: value === opt.value ? `0 0 28px ${opt.color}33` : 'none',
             }}
           >
-            <span className="text-xl leading-none">{opt.label.split(' ')[0]}</span>
             <span
               className="text-xs font-medium text-center leading-tight"
               style={{ color: value === opt.value ? opt.color : 'var(--gaga-text-dim)' }}
             >
-              {opt.label.split(' ').slice(1).join(' ')}
+              {opt.label}
             </span>
           </button>
         ))}

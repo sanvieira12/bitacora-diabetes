@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../lib/cn';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -8,10 +9,10 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantClasses: Record<string, string> = {
-  primary: 'bg-blue-500 hover:bg-blue-600 text-white border-transparent',
-  secondary: 'bg-surface hover:bg-border text-text-primary border-border',
-  danger: 'bg-red-400/20 hover:bg-red-400/30 text-red-400 border-red-400/40',
-  ghost: 'bg-transparent hover:bg-white/5 text-text-secondary border-transparent',
+  primary: 'border-medicalBlue/40 bg-medicalBlue/90 text-night-950 shadow-glowBlue hover:bg-medicalBlue',
+  secondary: 'border-white/10 bg-white/10 text-text-primary hover:bg-white/20',
+  danger: 'border-severeRed/40 bg-severeRed/18 text-severeRed hover:bg-severeRed/24 shadow-glowRed',
+  ghost: 'border-transparent bg-transparent text-text-secondary hover:bg-white/10 hover:text-text-primary',
 };
 
 const sizeClasses: Record<string, string> = {
@@ -20,7 +21,7 @@ const sizeClasses: Record<string, string> = {
   lg: 'px-6 py-4 text-lg min-h-[56px]',
 };
 
-export function Button({
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -28,18 +29,19 @@ export function Button({
   children,
   className = '',
   ...rest
-}: ButtonProps) {
+}: ButtonProps, ref) {
   return (
     <button
+      ref={ref}
       disabled={disabled || loading}
-      className={[
-        'inline-flex items-center justify-center rounded-xl border font-medium',
-        'transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/50',
+      className={cn(
+        'inline-flex items-center justify-center rounded-2xl border font-semibold',
+        'transition-all duration-200 active:scale-[0.975] focus:outline-none focus:ring-2 focus:ring-medicalBlue/50',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         variantClasses[variant],
         sizeClasses[size],
-        className,
-      ].join(' ')}
+        className
+      )}
       {...rest}
     >
       {loading && (
@@ -60,4 +62,4 @@ export function Button({
       {children}
     </button>
   );
-}
+});

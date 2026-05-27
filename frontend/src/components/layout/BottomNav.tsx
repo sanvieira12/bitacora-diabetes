@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
-import { Home, BookOpen, BarChart2, FileText } from 'lucide-react';
+import { NavLink, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Home, BookOpen, BarChart2, FileText, Clock3 } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Inicio', icon: Home },
@@ -10,8 +11,15 @@ const navItems = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md border-t border-border md:hidden">
-      <div className="flex">
+    <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.85rem+var(--gaga-safe-bottom))] md:hidden">
+      <div className="glass-panel relative mx-auto flex max-w-md rounded-[2rem] p-2">
+        <Link
+          to="/registro-rapido"
+          aria-label="Registro rápido"
+          className="absolute left-1/2 top-0 z-20 grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-3xl border border-medicalBlue/35 bg-night-950/88 text-medicalBlue shadow-glowBlue backdrop-blur-2xl transition active:scale-95"
+        >
+          <Clock3 size={23} />
+        </Link>
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -19,13 +27,31 @@ export function BottomNav() {
             end={to === '/'}
             className={({ isActive }) =>
               [
-                'flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors text-xs font-medium',
-                isActive ? 'text-blue-400' : 'text-text-secondary hover:text-text-primary',
+                'relative flex-1 rounded-[1.45rem] px-2 py-2.5 text-xs font-semibold transition-colors',
+                'flex flex-col items-center gap-1',
+                isActive ? 'text-white' : 'text-text-secondary hover:text-text-primary',
               ].join(' ')
             }
           >
-            <Icon size={22} />
-            {label}
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <motion.span
+                    layoutId="bottom-nav-active"
+                    className="absolute inset-0 rounded-[1.45rem] bg-medicalBlue/15 shadow-glowBlue"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <motion.span
+                  className="relative z-10"
+                  animate={{ y: isActive ? -1 : 0, scale: isActive ? 1.05 : 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Icon size={21} />
+                </motion.span>
+                <span className="relative z-10 leading-none">{label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>

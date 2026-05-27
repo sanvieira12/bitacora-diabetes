@@ -3,44 +3,71 @@
 @tailwind utilities;
 
 :root {
-  --gaga-bg: #0a0a12;
-  --gaga-surface: #12121e;
-  --gaga-surface-2: #1c1c2e;
-  --gaga-accent: #f59e42;
-  --gaga-accent-soft: #fbbf7a;
-  --gaga-success: #4ade80;
-  --gaga-danger: #f87171;
-  --gaga-text: #e8e8f0;
-  --gaga-text-dim: #7070a0;
+  --gaga-bg: #050816;
+  --gaga-surface: rgba(8, 13, 31, 0.84);
+  --gaga-surface-2: rgba(15, 24, 48, 0.88);
+  --gaga-accent: #63b3ff;
+  --gaga-accent-soft: #9fd8ff;
+  --gaga-success: #6ee7b7;
+  --gaga-warning: #fbbf24;
+  --gaga-danger: #fb7185;
+  --gaga-text: #f4f7fb;
+  --gaga-text-dim: #b8c6e6;
+  --gaga-glass-border: rgba(255, 255, 255, 0.11);
+  --gaga-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --gaga-safe-top: env(safe-area-inset-top, 0px);
 
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* legacy aliases kept for backward compat with existing components */
   --color-background: var(--gaga-bg);
   --color-surface: var(--gaga-surface);
-  --color-border: #2a2a40;
+  --color-border: rgba(255, 255, 255, 0.1);
   --color-text-primary: var(--gaga-text);
   --color-text-secondary: var(--gaga-text-dim);
   --color-green: var(--gaga-success);
-  --color-yellow: #fbbf24;
+  --color-yellow: var(--gaga-warning);
   --color-red: var(--gaga-danger);
-  --color-blue: #3b82f6;
+  --color-blue: var(--gaga-accent);
 }
 
 html {
-  background-color: var(--gaga-bg);
+  min-height: 100%;
+  background: var(--gaga-bg);
   color: var(--gaga-text);
-  font-family: 'Geist', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background-color: var(--gaga-bg);
+  min-height: 100%;
   margin: 0;
-  padding: 0;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(99, 179, 255, 0.18), transparent 42%),
+    linear-gradient(180deg, #050816 0%, #081122 52%, #050816 100%);
+  color: var(--gaga-text);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(99, 179, 255, 0.32);
+  color: #fff;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  color-scheme: dark;
+  transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms ease-out;
 }
 
 input[type='number']::-webkit-inner-spin-button,
@@ -48,94 +75,79 @@ input[type='number']::-webkit-outer-spin-button {
   opacity: 1;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 :focus-visible {
-  outline: 2px solid var(--gaga-accent);
-  outline-offset: 2px;
+  outline: 2px solid rgba(99, 179, 255, 0.88);
+  outline-offset: 3px;
 }
 
-/* Active scale for all buttons */
-button:active,
-[role='button']:active {
-  transform: scale(0.97);
-  transition: transform 100ms ease-out;
+::-webkit-scrollbar {
+  width: 10px;
 }
 
-/* Input focus transitions */
-input,
-select,
-textarea {
-  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-/* Gradient progress bar fill animation */
-@keyframes progressFlow {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+::-webkit-scrollbar-thumb {
+  background: rgba(147, 197, 253, 0.22);
+  border: 2px solid rgba(5, 8, 22, 0.8);
+  border-radius: 999px;
 }
 
-@keyframes starPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.3); }
+.glass-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.105), rgba(9, 14, 32, 0.74));
+  border: 1px solid var(--gaga-glass-border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(22px) saturate(130%);
+  -webkit-backdrop-filter: blur(22px) saturate(130%);
 }
 
-@keyframes flipUp {
-  0%   { transform: translateY(0) rotateX(0deg);    opacity: 1; }
-  50%  { transform: translateY(-60%) rotateX(90deg); opacity: 0; }
-  51%  { transform: translateY(60%) rotateX(-90deg); opacity: 0; }
-  100% { transform: translateY(0) rotateX(0deg);    opacity: 1; }
+.glass-input {
+  background: rgba(5, 10, 26, 0.68);
+  border-color: rgba(255, 255, 255, 0.11);
 }
 
-@keyframes celebrationIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1);   }
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0);   }
-  20%       { transform: translateX(-4px); }
-  40%       { transform: translateX(4px);  }
-  60%       { transform: translateX(-4px); }
-  80%       { transform: translateX(4px);  }
+.safe-pt {
+  padding-top: env(safe-area-inset-top);
 }
 
-@keyframes drawCheck {
-  from { stroke-dashoffset: 100; }
-  to   { stroke-dashoffset: 0;   }
+.late-night-mode {
+  filter: saturate(0.88) brightness(0.9);
 }
 
-@keyframes slideInRight {
-  from { transform: translateX(24px); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-
-@keyframes slideOutLeft {
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(-24px); opacity: 0; }
+.medical-text-gradient {
+  background: linear-gradient(135deg, #f8fbff 0%, #b8dcff 44%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to   { opacity: 1; }
+  to { opacity: 1; }
 }
 
-/* Particle burst for goal unlock */
-@keyframes particleBurst {
-  0%   { transform: translate(0, 0) scale(1);     opacity: 1; }
-  100% { transform: var(--tx, 0) var(--ty, 0) scale(0); opacity: 0; }
+@keyframes drawCheck {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 200ms !important;
-    transition-property: opacity !important;
+    scroll-behavior: auto !important;
+    transition-duration: 160ms !important;
+    transition-property: opacity, color, background-color, border-color !important;
   }
 }

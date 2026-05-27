@@ -41,7 +41,7 @@ La app requiere un PIN de 4 dígitos para acceder.
 docker compose up -d
 ```
 
-Esto crea el contenedor PostgreSQL en `localhost:5432` con base de datos `gluconoche`, usuario `gluconoche`, contraseña `gluconoche_dev`.
+Esto crea el contenedor PostgreSQL en `localhost:5433` y lo conecta al puerto `5432` del contenedor, con base de datos `gluconoche`, usuario `gluconoche`, contraseña `gluconoche_dev`.
 
 ### 2. Arrancar el backend
 
@@ -50,7 +50,7 @@ cd backend
 mvn spring-boot:run
 ```
 
-El servidor arranca en `http://localhost:8080`. Flyway aplica las migraciones automáticamente al primer inicio (crea las tablas y siembra a Juana como usuaria).
+El servidor arranca en `http://localhost:8081`. Flyway aplica las migraciones automáticamente al primer inicio (crea las tablas y siembra a Juana como usuaria).
 
 Para desarrollo local con SQL en consola:
 
@@ -66,12 +66,18 @@ npm install
 npm run dev
 ```
 
-La app abre en `http://localhost:5173`. Las llamadas a `/api/*` se proxean automáticamente al backend en 8080.
+La app abre en `http://localhost:5173`. Las llamadas a `/api/*` se proxean automáticamente al backend en 8081.
 
 ### 4. Abrir en el navegador
 
 ```
 http://localhost:5173
+```
+
+Health check rápido del backend:
+
+```bash
+curl http://localhost:8081/api/health
 ```
 
 ## Endpoints principales
@@ -142,14 +148,13 @@ Los umbrales se configuran desde la pantalla de configuración.
 | `DB_USER` | Usuario de la DB |
 | `DB_PASSWORD` | Contraseña de la DB |
 | `JWT_SECRET` | String aleatorio ≥ 32 caracteres. Generá con: `openssl rand -base64 64` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos separados por coma |
+| `PORT` | Puerto del backend. Localmente usa `8081` por defecto |
 
 ## Próximos pasos para deploy
 
 1. Generar `JWT_SECRET` con `openssl rand -base64 64` y configurarlo como variable de entorno
-2. Crear `backend/src/main/resources/application-prod.yml` con variables de entorno reales
-2. Dockerizar el backend (`Dockerfile` multi-stage con Maven + JRE 21)
-3. Agregar `frontend/.env.production` con la URL real del backend
-4. Hacer build del frontend con `npm run build` y servir con Nginx o similar
-5. Usar un secreto real para la BD (no la contraseña de dev)
-6. Configurar SSL/TLS para el backend
-7. Agregar backups automáticos de PostgreSQL
+2. Crear backend + PostgreSQL en Railway y configurar `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`
+3. Configurar Vercel para el frontend con `VITE_API_URL` apuntando al backend real
+4. Usar secretos reales para producción (no la contraseña de dev)
+5. Configurar backups automáticos de PostgreSQL

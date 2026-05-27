@@ -1,36 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, Shield, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { PageHeader } from '../components/ui/PageHeader';
+import { LoadingState, StateBlock } from '../components/ui/StateBlock';
 import { useSettings } from '../hooks/useSettings';
 
 function NumberField({
   label,
   value,
   onChange,
-  unit = 'mg/dL',
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
-  unit?: string;
 }) {
   return (
-    <div className="flex items-center justify-between py-2">
-      <label className="text-sm text-text-secondary flex-1">{label}</label>
-      <div className="flex items-center gap-2">
+    <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3">
+      <span className="min-w-0 text-sm font-medium text-text-secondary">{label}</span>
+      <span className="flex items-center gap-2">
         <input
           type="number"
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-20 bg-background border border-border rounded-lg px-3 py-2 text-sm text-text-primary
-            text-right focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          className="glass-input h-11 w-24 rounded-2xl border px-3 text-right text-base font-bold tabular-nums text-text-primary focus:outline-none focus:ring-2 focus:ring-medicalBlue/45"
         />
-        <span className="text-xs text-text-secondary">{unit}</span>
-      </div>
-    </div>
+      </span>
+    </label>
   );
 }
 
@@ -64,113 +62,124 @@ export function SettingsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const toastId = toast.loading('Guardando configuración...');
     try {
       await save({
         ...form,
         doctorNotes: form.doctorNotes || undefined,
       });
+      toast.success('Configuración guardada', {
+        id: toastId,
+        description: 'Tus umbrales quedaron actualizados.',
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      // error shown via saveError
+      toast.error('No se pudo guardar', {
+        id: toastId,
+        description: 'La configuración no se modificó. Intentá nuevamente.',
+      });
     }
   };
 
-  if (loading) return <LoadingSpinner className="py-12" />;
+  if (loading) return <LoadingState label="Cargando configuración" />;
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-xl hover:bg-white/5 transition-colors text-text-secondary"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-bold text-text-primary">Configuración</h1>
-      </div>
+      <PageHeader
+        back
+        icon={<SlidersHorizontal size={22} />}
+        eyebrow="Ajustes clínicos"
+        title="Configuración"
+        description="Umbrales, seguridad y notas que ayudan a que GAGA responda con claridad."
+      />
 
       <form onSubmit={handleSave} className="space-y-5">
-        {/* Thresholds */}
-        <Card className="p-4">
-          <h2 className="font-semibold text-text-primary mb-3">Umbrales de glucosa</h2>
+        <Card className="space-y-3 p-5">
+          <div>
+            <h2 className="text-lg font-bold text-text-primary">Umbrales de glucosa</h2>
+            <p className="mt-1 text-sm leading-6 text-text-secondary">
+              Estos valores definen los estados visuales y el tono de atención de la app.
+            </p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-medicalBlue">
+              Valores en mg/dL
+            </p>
+          </div>
           <NumberField
-            label="Glucosa crítica (debajo de)"
+            label="Crítica debajo de"
             value={form.criticalGlucoseThreshold}
             onChange={(v) => setForm((f) => ({ ...f, criticalGlucoseThreshold: v }))}
           />
           <NumberField
-            label="Glucosa baja (debajo de)"
+            label="Baja debajo de"
             value={form.lowGlucoseThreshold}
             onChange={(v) => setForm((f) => ({ ...f, lowGlucoseThreshold: v }))}
           />
           <NumberField
-            label="Objetivo nocturno mínimo"
+            label="Objetivo mínimo"
             value={form.bedtimeTargetMin}
             onChange={(v) => setForm((f) => ({ ...f, bedtimeTargetMin: v }))}
           />
           <NumberField
-            label="Objetivo nocturno máximo"
+            label="Objetivo máximo"
             value={form.bedtimeTargetMax}
             onChange={(v) => setForm((f) => ({ ...f, bedtimeTargetMax: v }))}
           />
           <NumberField
-            label="Glucosa muy alta (encima de)"
+            label="Muy alta encima de"
             value={form.highGlucoseThreshold}
             onChange={(v) => setForm((f) => ({ ...f, highGlucoseThreshold: v }))}
           />
         </Card>
 
-        {/* Emergency protocol */}
-        <Card className="p-4 space-y-2">
-          <h2 className="font-semibold text-text-primary">Protocolo de emergencia</h2>
-          <p className="text-xs text-text-secondary">
-            Texto que aparece en los informes para la médica.
-          </p>
+        <Card className="space-y-3 p-5">
+          <div>
+            <h2 className="text-lg font-bold text-text-primary">Protocolo de emergencia</h2>
+            <p className="mt-1 text-sm leading-6 text-text-secondary">
+              Texto incluido en informes médicos y situaciones prioritarias.
+            </p>
+          </div>
           <textarea
             value={form.emergencyProtocolText}
             onChange={(e) => setForm((f) => ({ ...f, emergencyProtocolText: e.target.value }))}
-            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-text-primary
-              focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[100px] resize-none"
+            className="glass-input min-h-[116px] w-full resize-none rounded-3xl border px-4 py-3 text-sm leading-6 text-text-primary focus:outline-none focus:ring-2 focus:ring-medicalBlue/45"
           />
         </Card>
 
-        {/* Doctor notes */}
-        <Card className="p-4 space-y-2">
-          <h2 className="font-semibold text-text-primary">Notas para la médica</h2>
+        <Card className="space-y-3 p-5">
+          <h2 className="text-lg font-bold text-text-primary">Notas para la médica</h2>
           <textarea
             value={form.doctorNotes}
             onChange={(e) => setForm((f) => ({ ...f, doctorNotes: e.target.value }))}
             placeholder="Indicaciones especiales, medicación actual..."
-            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-text-primary
-              focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[80px] resize-none
-              placeholder:text-text-secondary/50"
+            className="glass-input min-h-[96px] w-full resize-none rounded-3xl border px-4 py-3 text-sm leading-6 text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-medicalBlue/45"
           />
         </Card>
 
-        {/* PIN */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="font-semibold text-text-primary">Seguridad</h2>
-              <p className="text-xs text-text-secondary mt-0.5">PIN de acceso a la app</p>
+              <h2 className="text-lg font-bold text-text-primary">Seguridad</h2>
+              <p className="mt-1 text-sm text-text-secondary">PIN privado de acceso a GAGA.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/cambiar-pin')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10
-                transition-colors text-sm text-text-secondary hover:text-text-primary"
-            >
-              <Shield size={15} />
+            <Button type="button" variant="secondary" onClick={() => navigate('/cambiar-pin')}>
+              <Shield size={16} className="mr-2" />
               Cambiar PIN
-            </button>
+            </Button>
           </div>
         </Card>
 
-        {saveError && <p className="text-sm text-red-400 text-center">{saveError}</p>}
+        {saveError && (
+          <StateBlock
+            tone="danger"
+            title="No se pudo guardar"
+            description={saveError}
+            className="p-5"
+          />
+        )}
 
         {saved && (
-          <div className="flex items-center gap-2 justify-center text-green-400 text-sm">
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-calmGreen/25 bg-calmGreen/10 px-4 py-3 text-sm font-semibold text-calmGreen">
             <Check size={16} />
             Configuración guardada
           </div>

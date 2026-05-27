@@ -15,8 +15,8 @@ export function formatTime(time: string): string {
   return time.slice(0, 5);
 }
 
-export function formatGlucose(val: number): string {
-  return `${val} mg/dL`;
+export function formatGlucoseValue(val: number): string {
+  return String(val);
 }
 
 export function formatAttentionLevel(level: AttentionLevel): string {

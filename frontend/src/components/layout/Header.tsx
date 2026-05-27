@@ -12,24 +12,29 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-border">
-      <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <Moon className="text-blue-400" size={20} />
-          <span className="font-bold text-lg text-text-primary">GAGA</span>
+    <header className="safe-pt sticky top-0 z-40 px-3 pt-2">
+      <div className="glass-panel mx-auto flex h-16 max-w-2xl items-center justify-between rounded-[1.65rem] px-4">
+        <Link to="/" className="group flex items-center gap-3" aria-label="Ir al inicio">
+          <span className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/10 shadow-glowBlue transition-transform duration-300 group-hover:scale-105">
+            <Moon className="text-medicalBlue" size={21} />
+          </span>
+          <span>
+            <span className="block text-lg font-extrabold leading-none tracking-tight text-text-primary">GAGA</span>
+            <span className="mt-0.5 block text-[11px] font-medium text-text-secondary">noche en calma</span>
+          </span>
         </Link>
 
         <div className="flex items-center gap-1">
           <Link
             to="/configuracion"
-            className="p-2 rounded-xl hover:bg-white/5 transition-colors text-text-secondary hover:text-text-primary"
+            className="rounded-2xl border border-white/0 p-2.5 text-text-secondary transition-all duration-200 hover:border-white/10 hover:bg-white/10 hover:text-text-primary"
             aria-label="Configuración"
           >
             <Settings size={20} />
           </Link>
           <button
             onClick={handleLogout}
-            className="p-2 rounded-xl hover:bg-white/5 transition-colors text-text-secondary hover:text-text-primary"
+            className="rounded-2xl border border-white/0 p-2.5 text-text-secondary transition-all duration-200 hover:border-white/10 hover:bg-white/10 hover:text-text-primary"
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
           >

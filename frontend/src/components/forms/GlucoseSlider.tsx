@@ -5,6 +5,7 @@ interface Props {
   onChange: (v: number) => void;
   min?: number;
   max?: number;
+  showValueDisplay?: boolean;
 }
 
 function glucoseColor(v: number): string {
@@ -21,7 +22,7 @@ function glucoseLabel(v: number): string {
   return 'Alto';
 }
 
-export function GlucoseSlider({ value, onChange, min = 10, max = 500 }: Props) {
+export function GlucoseSlider({ value, onChange, min = 10, max = 500, showValueDisplay = true }: Props) {
   const id = useId();
   const color = glucoseColor(value);
   const pct = ((value - min) / (max - min)) * 100;
@@ -33,18 +34,19 @@ export function GlucoseSlider({ value, onChange, min = 10, max = 500 }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Value display */}
-      <div className="flex flex-col items-center gap-1">
-        <span
-          className="text-5xl font-bold tabular-nums transition-colors duration-300"
-          style={{ color }}
-        >
-          {value}
-        </span>
-        <span className="text-sm font-medium" style={{ color }}>
-          mg/dL · {glucoseLabel(value)}
-        </span>
-      </div>
+      {showValueDisplay && (
+        <div className="flex flex-col items-center gap-1">
+          <span
+            className="text-5xl font-bold tabular-nums transition-colors duration-300"
+            style={{ color }}
+          >
+            {value}
+          </span>
+          <span className="text-sm font-medium" style={{ color }}>
+            {glucoseLabel(value)}
+          </span>
+        </div>
+      )}
 
       {/* Slider track */}
       <div className="relative h-10 flex items-center px-2">

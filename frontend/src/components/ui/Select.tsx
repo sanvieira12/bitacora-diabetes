@@ -23,8 +23,8 @@ export function Select({ label, options, error, id, className = '', ...rest }: S
       <select
         id={selectId}
         className={[
-          'bg-background border rounded-xl px-4 py-3 text-text-primary',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500',
+          'glass-input border rounded-2xl px-4 py-3 text-text-primary',
+          'focus:outline-none focus:ring-2 focus:ring-medicalBlue/40 focus:border-medicalBlue/70',
           'transition-colors appearance-none',
           error ? 'border-red-400' : 'border-border',
           className,
