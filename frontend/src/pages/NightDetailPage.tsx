@@ -13,8 +13,6 @@ import { getNightRecord, deleteNightRecord } from '../api/nightRecords';
 import {
   formatDate,
   formatGlucoseValue,
-  formatSleepQuality,
-  formatStressLevel,
   formatSeverity,
   formatTime,
 } from '../lib/formatters';
@@ -28,6 +26,37 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
       <span className="text-right text-sm font-semibold text-text-primary">{value}</span>
     </div>
   );
+}
+
+const ALCOHOL_LABELS: Record<string, string> = {
+  none: 'Sin alcohol',
+  little: 'Cantidad baja',
+  moderate: 'Cantidad moderada',
+  a_lot: 'Cantidad alta',
+};
+
+const DINNER_LABELS: Record<string, string> = {
+  nothing: 'No cené',
+  light: 'Cena liviana',
+  normal: 'Cena normal',
+  heavy: 'Cena pesada',
+  very_heavy: 'Cena muy pesada',
+};
+
+const EXERCISE_LABELS: Record<string, string> = {
+  none: 'Sin ejercicio',
+  light: 'Actividad liviana',
+  moderate: 'Actividad moderada',
+  intense: 'Actividad intensa',
+};
+
+function hasText(value?: string | null): value is string {
+  return Boolean(value && value.trim().length > 0);
+}
+
+function mapChoice(value: string | undefined, labels: Record<string, string>): string | null {
+  if (!value) return null;
+  return labels[value] ?? value;
 }
 
 export function NightDetailPage() {
@@ -90,6 +119,12 @@ export function NightDetailPage() {
   }
 
   const status = nightRecordToMedicalStatus(record);
+  const alcoholLabel = mapChoice(record.alcohol, ALCOHOL_LABELS);
+  const dinnerLabel = mapChoice(record.dinnerType, DINNER_LABELS);
+  const activityLabel = mapChoice(record.exerciseLevel, EXERCISE_LABELS) ?? (record.physicalActivityToday ? 'Sí' : 'No');
+  const snackDescription = hasText(record.snackDescription) ? record.snackDescription.trim() : null;
+  const snackInterventionValue = snackDescription ?? (record.hadBedtimeSnack ? 'No registrado' : null);
+  const notes = hasText(record.notes) ? record.notes.trim() : null;
 
   return (
     <div className="space-y-5">
@@ -146,16 +181,15 @@ export function NightDetailPage() {
       <Card className="p-5">
         <h2 className="mb-2 text-lg font-bold text-text-primary">Contexto</h2>
         <DetailRow label="Hora de acostarse" value={formatTime(record.bedtime)} />
-        {record.wakeTime && <DetailRow label="Hora de despertar" value={formatTime(record.wakeTime)} />}
-        <DetailRow label="Calidad del sueño" value={formatSleepQuality(record.sleepQuality)} />
-        <DetailRow label="Nivel de estrés" value={formatStressLevel(record.stressLevel)} />
-        <DetailRow label="Actividad física" value={record.physicalActivityToday ? 'Sí' : 'No'} />
+        {dinnerLabel && <DetailRow label="Cena" value={dinnerLabel} />}
+        {alcoholLabel && <DetailRow label="Alcohol" value={alcoholLabel} />}
+        <DetailRow label="Actividad física" value={activityLabel} />
         <DetailRow label="Colación nocturna" value={record.hadBedtimeSnack ? 'Sí' : 'No'} />
-        {record.snackDescription && <DetailRow label="Descripción" value={record.snackDescription} />}
-        {record.notes && (
+        {snackInterventionValue && <DetailRow label="Intervención/snack" value={snackInterventionValue} />}
+        {notes && (
           <div className="pt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Notas</p>
-            <p className="mt-2 text-sm leading-6 text-text-primary">{record.notes}</p>
+            <p className="mt-2 text-sm leading-6 text-text-primary">{notes}</p>
           </div>
         )}
       </Card>
