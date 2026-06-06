@@ -36,6 +36,9 @@ public class NightRecord {
     @Column(name = "date", nullable = false)
     private LocalDate date;
 
+    @Column(name = "measurement_time")
+    private LocalTime measurementTime;
+
     @Column(name = "glucose_before_sleep", nullable = false)
     private Integer glucoseBeforeSleep;
 

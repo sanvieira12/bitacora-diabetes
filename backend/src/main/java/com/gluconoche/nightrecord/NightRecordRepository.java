@@ -8,20 +8,42 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface NightRecordRepository extends JpaRepository<NightRecord, UUID> {
 
-    Page<NightRecord> findAllByPersonIdAndDateBetweenOrderByDateDesc(
+    Page<NightRecord> findAllByPersonIdAndDateBetweenOrderByDateDescMeasurementTimeDesc(
             UUID personId, LocalDate from, LocalDate to, Pageable pageable);
 
-    Optional<NightRecord> findByPersonIdAndDate(UUID personId, LocalDate date);
+    Optional<NightRecord> findFirstByPersonIdAndDateOrderByMeasurementTimeDescCreatedAtDesc(
+            UUID personId,
+            LocalDate date);
+
+    Optional<NightRecord> findByPersonIdAndDateAndMeasurementTimeAndGlucoseBeforeSleep(
+            UUID personId,
+            LocalDate date,
+            LocalTime measurementTime,
+            Integer glucoseBeforeSleep);
+
+    Optional<NightRecord> findByPersonIdAndDateAndMeasurementTimeIsNullAndGlucoseBeforeSleepAndNotes(
+            UUID personId,
+            LocalDate date,
+            Integer glucoseBeforeSleep,
+            String notes);
+
+    boolean existsByPersonIdAndDateAndMeasurementTimeAndGlucoseBeforeSleepAndIdNot(
+            UUID personId,
+            LocalDate date,
+            LocalTime measurementTime,
+            Integer glucoseBeforeSleep,
+            UUID id);
 
     long countByPersonId(UUID personId);
 
-    List<NightRecord> findAllByPersonIdAndDateBetweenOrderByDateAsc(
+    List<NightRecord> findAllByPersonIdAndDateBetweenOrderByDateAscMeasurementTimeAsc(
             UUID personId, LocalDate from, LocalDate to);
 
     /**
@@ -39,7 +61,7 @@ public interface NightRecordRepository extends JpaRepository<NightRecord, UUID> 
                    (:hasEpisode = FALSE AND NOT EXISTS (
                        SELECT 1 FROM EpisodeRecord er WHERE er.nightRecord.id = nr.id
                    )))
-            ORDER BY nr.date DESC
+            ORDER BY nr.date DESC, nr.measurementTime DESC, nr.createdAt DESC
             """)
     Page<NightRecord> findWithFilters(
             @Param("personId") UUID personId,

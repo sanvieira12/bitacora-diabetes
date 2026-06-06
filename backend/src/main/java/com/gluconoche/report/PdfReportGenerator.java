@@ -130,9 +130,9 @@ public class PdfReportGenerator {
                 doc.add(new Paragraph("Sin datos de tendencia para el período.")
                         .setFont(italicFont).setFontSize(10).setFontColor(ColorConstants.GRAY));
             } else {
-                Table trendTable = new Table(UnitValue.createPercentArray(new float[]{40, 35, 25}))
+                Table trendTable = new Table(UnitValue.createPercentArray(new float[]{30, 15, 30, 25}))
                         .useAllAvailableWidth();
-                for (String h : new String[]{"Fecha", "Glucosa (mg/dL)", "Nivel"}) {
+                for (String h : new String[]{"Fecha", "Hora", "Glucosa (mg/dL)", "Nivel"}) {
                     trendTable.addHeaderCell(new Cell().add(new Paragraph(h)
                             .setFont(boldFont).setFontSize(8))
                             .setBackgroundColor(HEADER_COLOR)
@@ -140,6 +140,11 @@ public class PdfReportGenerator {
                 }
                 for (GlucoseTrendPoint point : trend) {
                     trendTable.addCell(cell(point.getDate().format(DATE_FMT), regularFont));
+                    trendTable.addCell(cell(
+                            point.getMeasurementTime() != null
+                                    ? point.getMeasurementTime().toString()
+                                    : "-",
+                            regularFont));
                     trendTable.addCell(cell(String.valueOf(point.getGlucoseBeforeSleep()), regularFont));
                     trendTable.addCell(cell(translateLevel(point.getAttentionLevel()), regularFont));
                 }

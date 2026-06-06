@@ -21,6 +21,7 @@ public class NightRecordResponse {
 
     private UUID id;
     private LocalDate date;
+    private LocalTime measurementTime;
     private Integer glucoseBeforeSleep;
     private Integer glucoseWakeup;
     private boolean hadBedtimeSnack;

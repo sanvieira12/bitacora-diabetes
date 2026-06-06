@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ public class NightRecordSummaryResponse {
 
     private UUID id;
     private LocalDate date;
+    private LocalTime measurementTime;
     private Integer glucoseBeforeSleep;
     private AttentionLevel attentionLevel;
     private List<String> attentionReasons;

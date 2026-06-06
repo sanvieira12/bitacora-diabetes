@@ -37,7 +37,7 @@ export function GlucoseLineChart({
 }: GlucoseLineChartProps) {
   const chartData = data.map((d) => ({
     ...d,
-    date: d.date.slice(5),
+    date: `${d.date.slice(5)}${d.measurementTime ? ` ${d.measurementTime.slice(0, 5)}` : ''}`,
   }));
 
   return (

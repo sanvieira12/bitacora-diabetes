@@ -38,6 +38,9 @@ frontend/.vite/
 backend/.env
 frontend/.env
 
+# Local clinical-data imports
+backend/imports/*.xlsx
+
 # OS
 .DS_Store
 .DS_Store?

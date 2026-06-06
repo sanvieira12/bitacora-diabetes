@@ -120,6 +120,7 @@ export function NightDetailPage() {
 
   const status = nightRecordToMedicalStatus(record);
   const alcoholLabel = mapChoice(record.alcohol, ALCOHOL_LABELS);
+  const alcoholValue = alcoholLabel ?? 'No registrado';
   const dinnerLabel = mapChoice(record.dinnerType, DINNER_LABELS);
   const activityLabel = mapChoice(record.exerciseLevel, EXERCISE_LABELS) ?? (record.physicalActivityToday ? 'Sí' : 'No');
   const snackDescription = hasText(record.snackDescription) ? record.snackDescription.trim() : null;
@@ -180,9 +181,13 @@ export function NightDetailPage() {
 
       <Card className="p-5">
         <h2 className="mb-2 text-lg font-bold text-text-primary">Contexto</h2>
+        <DetailRow
+          label="Hora de medición"
+          value={record.measurementTime ? formatTime(record.measurementTime) : 'No registrada'}
+        />
         <DetailRow label="Hora de acostarse" value={formatTime(record.bedtime)} />
         {dinnerLabel && <DetailRow label="Cena" value={dinnerLabel} />}
-        {alcoholLabel && <DetailRow label="Alcohol" value={alcoholLabel} />}
+        <DetailRow label="Alcohol" value={alcoholValue} />
         <DetailRow label="Actividad física" value={activityLabel} />
         <DetailRow label="Colación nocturna" value={record.hadBedtimeSnack ? 'Sí' : 'No'} />
         {snackInterventionValue && <DetailRow label="Intervención/snack" value={snackInterventionValue} />}

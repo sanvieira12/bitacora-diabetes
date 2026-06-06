@@ -89,7 +89,9 @@ public class EpisodeService {
         } else {
             // Auto-detect from episode date
             Optional<NightRecord> nightRecord = nightRecordRepository
-                    .findByPersonIdAndDate(personId, request.getEpisodeDate());
+                    .findFirstByPersonIdAndDateOrderByMeasurementTimeDescCreatedAtDesc(
+                            personId,
+                            request.getEpisodeDate());
             nightRecord.ifPresent(episode::setNightRecord);
         }
     }

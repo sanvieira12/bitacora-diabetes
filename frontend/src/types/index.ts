@@ -1,6 +1,6 @@
 export type AttentionLevel = 'GREEN' | 'YELLOW' | 'RED';
-export type SleepQuality = 'GOOD' | 'FAIR' | 'POOR';
-export type StressLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type SleepQuality = 'GOOD' | 'FAIR' | 'POOR' | 'UNKNOWN';
+export type StressLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
 export type EpisodeSeverity = 'MILD' | 'MODERATE' | 'SEVERE';
 
 export interface PageMeta {
@@ -21,6 +21,7 @@ export interface ApiResponse<T> {
 export interface NightRecord {
   id: string;
   date: string;
+  measurementTime?: string;
   glucoseBeforeSleep: number;
   glucoseWakeup?: number;
   hadBedtimeSnack: boolean;
@@ -44,6 +45,7 @@ export interface NightRecord {
 export interface NightRecordSummary {
   id: string;
   date: string;
+  measurementTime?: string;
   glucoseBeforeSleep: number;
   attentionLevel: AttentionLevel;
   attentionReasons: string[];
@@ -104,6 +106,7 @@ export interface StatisticsSummary {
 
 export interface GlucoseTrendPoint {
   date: string;
+  measurementTime?: string;
   glucoseBeforeSleep: number;
   attentionLevel: AttentionLevel;
 }
@@ -134,6 +137,7 @@ export interface DoctorSummary {
 
 export interface NightRecordRequest {
   date?: string;
+  measurementTime?: string;
   glucoseBeforeSleep: number;
   glucoseWakeup?: number;
   hadBedtimeSnack: boolean;

@@ -60,6 +60,12 @@ No usar `8080` para esta app. `8081` se eligió para evitar conflictos con otras
 
 El frontend está configurado con puerto estricto. Si `npm run dev` dice `Port 5173 is already in use`, hay otra app ocupando ese puerto y conviene detenerla antes de seguir, en vez de dejar que Vite mueva GAGA a otro puerto.
 
+## Importación histórica
+
+Los comandos para importar y verificar
+`backend/imports/Glucemias_2026_Ordenadas.xlsx` están en
+[`HISTORICAL_GLUCOSE_IMPORT.md`](HISTORICAL_GLUCOSE_IMPORT.md).
+
 ## Variables
 
 Backend:

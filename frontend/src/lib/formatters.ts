@@ -38,6 +38,8 @@ export function formatSleepQuality(q: SleepQuality): string {
       return 'Regular';
     case 'POOR':
       return 'Mala';
+    case 'UNKNOWN':
+      return 'No registrada';
   }
 }
 
@@ -49,6 +51,8 @@ export function formatStressLevel(s: StressLevel): string {
       return 'Moderado';
     case 'HIGH':
       return 'Alto';
+    case 'UNKNOWN':
+      return 'No registrado';
   }
 }
 

@@ -153,6 +153,7 @@ export function RegisterNightPage() {
     try {
       const request: NightRecordRequest = {
         date: recordDate,
+        measurementTime: form.bedtime,
         glucoseBeforeSleep: form.glucoseBeforeSleep,
         glucoseWakeup: editingRecord?.glucoseWakeup,
         bedtime: form.bedtime,

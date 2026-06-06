@@ -66,7 +66,8 @@ public class ReportService {
     public byte[] generateCsv(LocalDate from, LocalDate to) {
         UUID personId = currentPersonProvider.getPersonId();
         List<NightRecord> nights = nightRecordRepository
-                .findAllByPersonIdAndDateBetweenOrderByDateAsc(personId, from, to);
+                .findAllByPersonIdAndDateBetweenOrderByDateAscMeasurementTimeAsc(
+                        personId, from, to);
         List<EpisodeRecord> episodes = episodeRepository
                 .findAllByPersonIdAndEpisodeDateBetweenOrderByEpisodeDateAsc(personId, from, to);
         return csvReportGenerator.generateZip(from, to, nights, episodes);

@@ -7,12 +7,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
 public interface EpisodeRepository extends JpaRepository<EpisodeRecord, UUID> {
 
     List<EpisodeRecord> findByNightRecordId(UUID nightRecordId);
+
+    boolean existsByNightRecordIdAndEpisodeDateAndEpisodeTimeAndGlucoseAtEpisode(
+            UUID nightRecordId,
+            LocalDate episodeDate,
+            LocalTime episodeTime,
+            Integer glucoseAtEpisode);
 
     Page<EpisodeRecord> findAllByPersonIdAndEpisodeDateBetweenOrderByEpisodeDateDesc(
             UUID personId, LocalDate from, LocalDate to, Pageable pageable);

@@ -25,6 +25,7 @@ public class NightRecordMapper {
         return NightRecordResponse.builder()
                 .id(entity.getId())
                 .date(entity.getDate())
+                .measurementTime(entity.getMeasurementTime())
                 .glucoseBeforeSleep(entity.getGlucoseBeforeSleep())
                 .glucoseWakeup(entity.getGlucoseWakeup())
                 .hadBedtimeSnack(entity.isHadBedtimeSnack())
@@ -51,6 +52,7 @@ public class NightRecordMapper {
         return NightRecordSummaryResponse.builder()
                 .id(entity.getId())
                 .date(entity.getDate())
+                .measurementTime(entity.getMeasurementTime())
                 .glucoseBeforeSleep(entity.getGlucoseBeforeSleep())
                 .attentionLevel(entity.getAttentionLevel())
                 .attentionReasons(entity.getAttentionReasons())
@@ -65,6 +67,9 @@ public class NightRecordMapper {
     public void updateFromRequest(NightRecord entity, NightRecordRequest request) {
         if (request.getDate() != null) {
             entity.setDate(request.getDate());
+        }
+        if (request.getMeasurementTime() != null) {
+            entity.setMeasurementTime(request.getMeasurementTime());
         }
         entity.setGlucoseBeforeSleep(request.getGlucoseBeforeSleep());
         entity.setGlucoseWakeup(request.getGlucoseWakeup());

@@ -15,6 +15,8 @@ public class NightRecordRequest {
     // Kept for edit operations.
     private LocalDate date;
 
+    private LocalTime measurementTime;
+
     @NotNull(message = "La glucosa antes de dormir es obligatoria")
     @Min(value = 10, message = "La glucosa debe ser al menos 10 mg/dL")
     @Max(value = 500, message = "La glucosa no puede superar 500 mg/dL")

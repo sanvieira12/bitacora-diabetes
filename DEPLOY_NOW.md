@@ -96,3 +96,10 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhos
   - Episodio
 - Historial carga datos.
 - Prueba desde celular.
+
+## Importación histórica
+
+Después de desplegar el backend, seguir
+[`HISTORICAL_GLUCOSE_IMPORT.md`](HISTORICAL_GLUCOSE_IMPORT.md) para subir el
+Excel autenticado desde la máquina local y verificar historial, estadísticas e
+informe.

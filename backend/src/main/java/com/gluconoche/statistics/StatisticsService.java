@@ -70,11 +70,13 @@ public class StatisticsService {
     public List<GlucoseTrendPoint> getGlucoseTrend(LocalDate from, LocalDate to) {
         UUID personId = currentPersonProvider.getPersonId();
         List<NightRecord> records = nightRecordRepository
-                .findAllByPersonIdAndDateBetweenOrderByDateAsc(personId, from, to);
+                .findAllByPersonIdAndDateBetweenOrderByDateAscMeasurementTimeAsc(
+                        personId, from, to);
 
         return records.stream()
                 .map(r -> GlucoseTrendPoint.builder()
                         .date(r.getDate())
+                        .measurementTime(r.getMeasurementTime())
                         .glucoseBeforeSleep(r.getGlucoseBeforeSleep())
                         .attentionLevel(r.getAttentionLevel().name())
                         .build())
@@ -123,7 +125,8 @@ public class StatisticsService {
     public List<FactorFrequency> getFactors(LocalDate from, LocalDate to) {
         UUID personId = currentPersonProvider.getPersonId();
         List<NightRecord> records = nightRecordRepository
-                .findAllByPersonIdAndDateBetweenOrderByDateAsc(personId, from, to);
+                .findAllByPersonIdAndDateBetweenOrderByDateAscMeasurementTimeAsc(
+                        personId, from, to);
 
         long total = records.size();
         if (total == 0) return Collections.emptyList();

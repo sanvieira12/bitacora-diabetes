@@ -11,7 +11,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingState, StateBlock } from '../components/ui/StateBlock';
 import { staggerContainer, staggerItem } from '../components/visual/pageMotion';
 import { useNightRecords } from '../hooks/useNightRecords';
-import { formatDate, formatGlucoseValue } from '../lib/formatters';
+import { formatDate, formatGlucoseValue, formatTime } from '../lib/formatters';
 import { today, nDaysAgo } from '../lib/dateUtils';
 import type { AttentionLevel } from '../types';
 
@@ -126,6 +126,9 @@ export function HistoryPage() {
                       </p>
                     </div>
                     <p className="text-sm font-medium text-text-primary">{formatDate(record.date)}</p>
+                    <p className="mt-1 text-xs font-semibold text-medicalBlue">
+                      {record.measurementTime ? formatTime(record.measurementTime) : 'Hora no registrada'}
+                    </p>
                     <p className="mt-2 text-3xl font-extrabold tracking-tight text-text-primary">
                       {formatGlucoseValue(record.glucoseBeforeSleep)}
                     </p>

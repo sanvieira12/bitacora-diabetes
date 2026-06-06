@@ -2,6 +2,7 @@ package com.gluconoche.nightrecord;
 
 import com.gluconoche.common.ApiResponse;
 import com.gluconoche.common.enums.AttentionLevel;
+import com.gluconoche.episode.AutomaticEpisodeService;
 import com.gluconoche.episode.EpisodeRecord;
 import com.gluconoche.episode.EpisodeRepository;
 import com.gluconoche.nightrecord.dto.NightRecordMapper;
@@ -34,6 +35,7 @@ public class NightRecordService {
     private final SettingsService settingsService;
     private final CurrentPersonProvider currentPersonProvider;
     private final NightRecordMapper nightRecordMapper;
+    private final AutomaticEpisodeService automaticEpisodeService;
 
     @Transactional(readOnly = true)
     public Page<NightRecordSummaryResponse> findAll(
@@ -66,18 +68,17 @@ public class NightRecordService {
         LocalDate uruguayDate = ZonedDateTime.now(ZoneId.of("America/Montevideo")).toLocalDate();
         request.setDate(uruguayDate);
 
-        // Check for duplicate date
-        nightRecordRepository.findByPersonIdAndDate(personId, uruguayDate).ifPresent(existing -> {
-            throw new IllegalArgumentException(
-                "Ya existe un registro nocturno para la fecha " + uruguayDate);
-        });
-
         NightRecord record = new NightRecord();
         record.setPerson(currentPersonProvider.getPerson());
         nightRecordMapper.updateFromRequest(record, request);
+        if (record.getMeasurementTime() == null) {
+            record.setMeasurementTime(record.getBedtime());
+        }
+        ensureUniqueMeasurement(record, null);
         recalculateAttentionLevel(record);
 
         NightRecord saved = nightRecordRepository.save(record);
+        automaticEpisodeService.ensureForNightRecord(saved, saved.getBedtime());
         List<EpisodeRecord> episodes = episodeRepository.findByNightRecordId(saved.getId());
         return nightRecordMapper.toResponse(saved, episodes);
     }
@@ -86,9 +87,14 @@ public class NightRecordService {
     public NightRecordResponse update(UUID id, NightRecordRequest request) {
         NightRecord record = findRecord(id);
         nightRecordMapper.updateFromRequest(record, request);
+        if (record.getMeasurementTime() == null) {
+            record.setMeasurementTime(record.getBedtime());
+        }
+        ensureUniqueMeasurement(record, id);
         recalculateAttentionLevel(record);
 
         NightRecord saved = nightRecordRepository.save(record);
+        automaticEpisodeService.ensureForNightRecord(saved, saved.getBedtime());
         List<EpisodeRecord> episodes = episodeRepository.findByNightRecordId(saved.getId());
         return nightRecordMapper.toResponse(saved, episodes);
     }
@@ -110,6 +116,29 @@ public class NightRecordService {
         AttentionLevelCalculator.AttentionResult result = attentionLevelCalculator.calculate(record, settings);
         record.setAttentionLevel(result.level());
         record.setAttentionReasons(result.reasons());
+    }
+
+    private void ensureUniqueMeasurement(NightRecord record, UUID existingId) {
+        UUID personId = record.getPerson().getId();
+        boolean duplicate = existingId == null
+                ? nightRecordRepository
+                        .findByPersonIdAndDateAndMeasurementTimeAndGlucoseBeforeSleep(
+                                personId,
+                                record.getDate(),
+                                record.getMeasurementTime(),
+                                record.getGlucoseBeforeSleep())
+                        .isPresent()
+                : nightRecordRepository
+                        .existsByPersonIdAndDateAndMeasurementTimeAndGlucoseBeforeSleepAndIdNot(
+                                personId,
+                                record.getDate(),
+                                record.getMeasurementTime(),
+                                record.getGlucoseBeforeSleep(),
+                                existingId);
+        if (duplicate) {
+            throw new IllegalArgumentException(
+                    "Ya existe una medición con la misma fecha, hora y glucosa.");
+        }
     }
 
     /**

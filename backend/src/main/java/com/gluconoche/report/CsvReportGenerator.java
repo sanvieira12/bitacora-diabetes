@@ -23,7 +23,7 @@ import java.util.zip.ZipOutputStream;
 public class CsvReportGenerator {
 
     private static final String[] NIGHTS_HEADERS = {
-            "fecha", "glucosa_antes_dormir", "glucosa_al_despertar", "tuvo_colacion",
+            "fecha", "hora_medicion", "glucosa_antes_dormir", "glucosa_al_despertar", "tuvo_colacion",
             "descripcion_colacion", "hora_acostarse", "hora_despertar", "calidad_sueno",
             "actividad_fisica", "nivel_estres", "nivel_atencion", "notas"
     };
@@ -63,6 +63,7 @@ public class CsvReportGenerator {
             for (NightRecord n : nights) {
                 printer.printRecord(
                         n.getDate(),
+                        n.getMeasurementTime() != null ? n.getMeasurementTime() : "",
                         n.getGlucoseBeforeSleep(),
                         n.getGlucoseWakeup() != null ? n.getGlucoseWakeup() : "",
                         n.isHadBedtimeSnack() ? "Sí" : "No",

@@ -6,7 +6,6 @@ import { Drawer } from 'vaul';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Clock3, Droplets, Save, ShieldAlert } from 'lucide-react';
 import { createNightRecord } from '../api/nightRecords';
-import { createEpisode } from '../api/episodes';
 import { NightBackground } from '../components/visual/NightBackground';
 import { AnimatedPage } from '../components/visual/AnimatedPage';
 import { GlucoseOrb, type GlucoseOrbStatus } from '../components/visual/GlucoseOrb';
@@ -47,6 +46,7 @@ export function QuickNightRegisterPage() {
   const validGlucose = glucoseValue !== null && Number.isFinite(glucoseValue) && glucoseValue >= 10 && glucoseValue <= 500;
   const status = statusFromGlucose(validGlucose ? glucoseValue : null);
   const isSevere = status === 'severe';
+  const createsEpisode = validGlucose && glucoseValue !== null && glucoseValue < 70;
 
   const intervention = useMemo(() => {
     if (snack === 'Otro') return otherSnack.trim();
@@ -68,8 +68,9 @@ export function QuickNightRegisterPage() {
 
     try {
       const toastId = toast.loading('Guardando registro nocturno...');
-      const savedNight = await createNightRecord({
+      await createNightRecord({
         date: today(),
+        measurementTime: time,
         glucoseBeforeSleep: glucoseValue,
         bedtime: time,
         hadBedtimeSnack: true,
@@ -86,33 +87,8 @@ export function QuickNightRegisterPage() {
         ].filter(Boolean).join(' '),
       });
 
-      if (isSevere) {
-        try {
-          await createEpisode({
-            episodeDate: today(),
-            nightRecordId: savedNight.id,
-            episodeTime: time,
-            glucoseAtEpisode: glucoseValue,
-            severity: 'SEVERE',
-            symptoms: ['hipoglucemia'],
-            intervention: intervention || 'Agua con azúcar',
-            interventionType: snack === 'Otro' ? 'other' : snack === 'Miel' ? 'candy' : 'agua_con_azucar',
-            interventionNote: snack === 'Otro' ? intervention : undefined,
-            notes: 'Registrado automáticamente desde Registro rápido.',
-          });
-        } catch (episodeError: unknown) {
-          toast.warning('La noche quedó guardada, pero no pude crear el episodio automáticamente.', {
-            id: toastId,
-            description: episodeError instanceof Error ? episodeError.message : undefined,
-          });
-          setError('La noche quedó guardada. Revisá el episodio desde el detalle si hace falta.');
-          setSaving(false);
-          return;
-        }
-      }
-
       setSaved(true);
-      toast.success(isSevere ? 'Registro y episodio guardados.' : 'Registro nocturno guardado.', { id: toastId });
+      toast.success(createsEpisode ? 'Registro y episodio guardados.' : 'Registro nocturno guardado.', { id: toastId });
       window.setTimeout(() => navigate('/', { replace: true }), reducedMotion ? 450 : 850);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'No se pudo guardar el registro.';
